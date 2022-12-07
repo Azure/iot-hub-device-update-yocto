@@ -36,7 +36,40 @@ parameters:
   values:
   - honister
   - user/nox-msft/initial
-  
+- name: adu_uri
+  displayName: ADU Uri
+  type: string
+  default: http://github.com/azure/iot-hub-device-update
+- name: adu_branch
+  displayName: ADU Branch Name
+  type: string
+  default: main
+  values:
+    - main
+    - develop
+- name: do_uri
+  displayName: Delivery Optimization Uri
+  type: string
+  default: http://github.com/microsoft/do-client
+- name: do_branch
+  displayName: Delivery Optimization Branch
+  type: string
+  default: main
+  values:
+    - main
+    - develop
+- name: adu_delta_uri
+  displayName: Device Update Delta Diff Uri
+  type: string
+  default: http://github.com/azure/iot-hub-device-update-delta
+- name: adu_delta_branch
+  displayName: Device Update Delta Diff Branch
+  type: string
+  default: main
+  values:
+    - main
+    - develop
+
 #
 # Below, we're selecting variable group based on buid_env parameter above.
 # 
@@ -50,6 +83,18 @@ variables:
     value: ${{ parameters.yocto_release }}
   - name: meta_layer_branch
     value: ${{ parameters.meta_layer_branch }}
+  - name: adu_uri
+    value: ${{ parameters.adu_uri }}
+  - name: adu_branch
+    value: ${{ parameters.adu_branch }}
+  - name: do_uri
+    value: ${{ parameters.do_uri }}
+  - name: do_branch
+    value: ${{ parameters.do_branch }}
+  - name: adu_delta_uri
+    value: ${{ parameters.adu_delta_uri }}
+  - name: adu_delta_branch
+    value: ${{ parameters.adu_delta_branch }}
   - name: build_env
     value: ${{ parameters.build_env }}
   - name: majorVersion
@@ -61,11 +106,11 @@ variables:
 name: ${{ variables.majorVersion }}.${{ variables.minorVersion }}.$(BuildID).$(rev:r)
 
 #
-# Note: some build environment may requires hard-coded commit hash# (ADO Pipeline limitation) for some github reprository.
+# Note: some build environment may requires hard-coded commit hash# (ADO Pipeline limitation) for some github repository.
 # This can be achieved by specified the hard-coded commit hash# in 'version' parameter.
 # See resources-template-azure-adu-private-preview-dev-active.yml for example.
 #
-# This require a coresponding resources-template file with name matching selcted build_env parameter.
+# This require a corresponding resources-template file with name matching selected build_env parameter.
 #
 # To allow running pipeline manually with any desired commit hash#, the custom resources template can be select.
 # Then select specific commit using the Resources UI.

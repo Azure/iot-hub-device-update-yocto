@@ -55,50 +55,13 @@ jobs:
         displayName: Install Honister build dependencies (zstd, liblz4-tool)
         workingDirectory: "$(Pipeline.Workspace)"
         failOnStderr: true
-
-      # - checkout: azure_adu_private_preview
-      #   path: adu-linux-client
-      #   clean: true
-      #   fetchDepth: 100
-
-      # - checkout: iot_hub_device_update_delta
-      #   path: iot-hub-device-update-delta
-      #   clean: true
-      #   fetchDepth: 100
-
-      # - checkout: microsoft_do_client
-      #   path: do-client
-      #   submodules: recursive
-      #   clean: true
-      #   fetchDepth: 100
-
-      # # In order for yocto to use our local source, we have to package it as a tarball
-      # # and pass it to our recipe as a file URI.
-      # - bash: "tar -czvf adu-linux-client.tar.gz ./adu-linux-client"
-      #   displayName: "Package ADU client source as tarball"
-      #   workingDirectory: $(Pipeline.Workspace)
-      #   failOnStderr: true
-
-      # # In order for yocto to use our local source, we have to package it as a tarball
-      # # and pass it to our recipe as a file URI.
-      # - bash: "tar -czvf iot-hub-device-update-delta.tar.gz ./iot-hub-device-update-delta"
-      #   displayName: "Package ADU Delta source as tarball"
-      #   workingDirectory: $(Pipeline.Workspace)
-      #   failOnStderr: true
-
-      # # In order for yocto to use our local source, we have to package it as a tarball
-      # # and pass it to our recipe as a file URI.
-      # - bash: "tar -czvf do-client.tar.gz ./do-client"
-      #   displayName: "Package DO client source as tarball"
-      #   workingDirectory: $(Pipeline.Workspace)
-      #   failOnStderr: true
         
       - task: Bash@3
         displayName: "Run Yocto build"
         inputs:
           targetType: "filePath"
           filePath: "$(Pipeline.Workspace)/adu-yocto-build/scripts/build.sh"
-          arguments: '-c -t $(build_type) -v $(Build.BuildNumber) -o $(Build.BinariesDirectory) $(build_args)'
+          arguments: '-c -t $(build_type) -v $(Build.BuildNumber) --adu-uri $(adu_uri) --do-uri $(do_uri) --adu-delta-uri $(adu_delta_uri) -o $(Build.BinariesDirectory) $(build_args)'
           workingDirectory: $(Pipeline.Workspace)
 
       # Copy built artifacts to a staging directory for publishing.
