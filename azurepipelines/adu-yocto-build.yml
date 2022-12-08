@@ -39,7 +39,7 @@ parameters:
 - name: adu_uri
   displayName: ADU Uri
   type: string
-  default: http://github.com/azure/iot-hub-device-update
+  default: "gitsm://github.com/azure/iot-hub-device-update;tag=v1.0.0"
 - name: adu_branch
   displayName: ADU Branch Name
   type: string
@@ -50,7 +50,7 @@ parameters:
 - name: do_uri
   displayName: Delivery Optimization Uri
   type: string
-  default: http://github.com/microsoft/do-client
+  default: "gitsm://github.com/microsoft/do-client.git;tag=v1.0.0"
 - name: do_branch
   displayName: Delivery Optimization Branch
   type: string
@@ -61,7 +61,7 @@ parameters:
 - name: adu_delta_uri
   displayName: Device Update Delta Diff Uri
   type: string
-  default: http://github.com/azure/iot-hub-device-update-delta
+  default: gitsm://github.com/azure/iot-hub-device-update-delta
 - name: adu_delta_branch
   displayName: Device Update Delta Diff Branch
   type: string
