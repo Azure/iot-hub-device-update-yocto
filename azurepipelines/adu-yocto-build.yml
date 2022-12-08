@@ -81,11 +81,7 @@ parameters:
   displayName: Device Update Delta Diff Git commit 
   type: string
   default: 57efe4360f52b297ae54323271c530239fb1d1c7
-- name: build_args
-  displayName: Additional build arguments
-  type: string
 
-#
 # Below, we're selecting variable group based on build_env parameter above.
 # 
 # The variable groups are defined in Pipelines/Library.
