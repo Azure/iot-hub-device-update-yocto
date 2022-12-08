@@ -114,8 +114,6 @@ variables:
     value: ${{ parameters.adu_delta_git_commit }}
   - name: build_env
     value: ${{ parameters.build_env }}
-  - name: build_args
-    value: ${{ parameters.build_args }}
   - name: majorVersion
     value: 1
   - name: minorVersion
