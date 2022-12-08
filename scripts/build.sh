@@ -10,10 +10,17 @@ print_help()
     echo "                              Options are Debug, Release, RelWithDebInfo, MinSizeRel. Default is Debug."
     echo ""
     echo "--rebuild                     Execute a full rebuild from scratch. The build will take around 7 hours."
-    echo "-b, --adu-branch <branch>     Sets the ADU client branch to build. Default is master."
-    echo "--adu-uri <uri>               Sets the URI for the ADU client repo. Useful to build ADUC source from local path."
-    echo "--do-uri <uri>                Sets the URI for the DO client repo. Useful to build DO source from local path."
-    echo "--adu-delta-uri <uri>         Sets the URI for the AzureDeviceUpdateDiffs (FIT) repo. Useful to build FIT source from local path."
+    echo ""
+    echo "--adu-git-branch <branch>        Sets the ADU client branch to build. Default is main."
+    echo "--adu-src-uri <uri>              Sets the URI for the ADU client repo. Useful to build ADUC source from local path."
+    echo "--adu-git-commit <commit hash>   Sets the commit hash for the ADU client repo. Useful to build ADUC source from local path."
+    echo "--do-git-branch <branch>         Sets the DL client branch to build. Default is main."
+    echo "--do-src-uri <uri>               Sets the URI for the DO client repo. Useful to build DO source from local path."
+    echo "--do-git-commit <commit hash>    Sets the commit hash for the DO client repo. Useful to build ADUC source from local path."
+    echo "--adu-delta-git-branch <branch>  Sets the ADU Delta branch to build. Default is main."
+    echo "--adu-delta-src-uri <uri>        Sets the URI for the ADU Delta (FIT) repo. Useful to build FIT source from local path."
+    echo "--adu-delta-git-commit <hash>    Sets the commit hash for the ADU Delta repo. Useful to build ADUC source from local path."
+    echo ""
     echo "-v, --version <sw_version>    Sets the software version of this build. This version is baked into the image."
     echo "--core-image-only             Build the core-image only."
     echo "--aziot-c-sdk-only            Build Azure IoT C SDK only."
@@ -26,7 +33,18 @@ print_help()
 }
 
 # Defaults
-ADUC_GIT_BRANCH=master
+ADUC_GIT_BRANCH=main
+ADUC_GIT_COMMIT=33554d29476eab2447234528c8aed186e2b6423d
+ADUC_SRC_URI=gitsm://github.com/Azure/iot-hub-device-update
+
+DO_GIT_BRANCH=main
+DO_GIT_COMMIT=b61de2d347c8032562056b18f90ec710e531baf8
+DO_SRC_URI=gitsm://github.com/microsoft/do-client
+
+ADU_DELTA_GIT_BRANCH=main
+ADU_DELTA_GIT_COMMIT=57efe4360f52b297ae54323271c530239fb1d1c7
+ADU_DELTA_SRC_URI=gitsm://github.com/Azure/iot-hub-device-update-delta
+
 BUILD_DIR=$ROOT_DIR/build
 CLEAN=false
 BUILD_TYPE=Debug
@@ -42,21 +60,41 @@ while [[ $1 != "" ]]; do
         print_help
         exit 0
         ;;
-    -b | --adu-branch)
+    --adu-git-branch)
         shift
         ADUC_GIT_BRANCH=$1
         ;;
-    --adu-uri)
+    --adu-src-uri)
         shift
         ADUC_SRC_URI=$1
         ;;
-    --do-uri)
+    --adu-git-commit)
+        shift
+        ADUC_GIT_COMMIT=$1
+        ;;
+    --do-git-branch)
+        shift
+        DO_GIT_BRANCH=$1
+        ;;
+    --do-src-uri)
         shift
         DO_SRC_URI=$1
         ;;
-    --adu-delta-uri)
+    --do-git-commit)
         shift
-        ADUC_DELTA_SRC_URI=$1
+        DO_GIT_COMMIT=$1
+        ;;
+    --adu-delta-git-branch)
+        shift
+        ADU_DELTA_GIT_BRANCH=$1
+        ;;
+    --adu-delta-src-uri)
+        shift
+        ADU_DELTA_SRC_URI=$1
+        ;;
+    --adu-delta-git-commit)
+        shift
+        ADU_DELTA_GIT_COMMIT=$1
         ;;
     --core-image-only)
         BUILD_CORE_IMAGE_ONLY=1
@@ -103,19 +141,41 @@ done
 
 export MACHINE=raspberrypi3
 export TEMPLATECONF=$ROOT_DIR/yocto/config-templates/$MACHINE
-export ADUC_GIT_BRANCH
-export BUILD_TYPE
 
-if [ -n "${ADUC_SRC_URI}" ]; then
-    export ADUC_SRC_URI
+if [ -n "${ADU_SRC_URI}" ]; then
+    export ADU_SRC_URI
+fi
+
+if [ -n "${ADU_GIT_BRANCH}" ]; then
+    export ADU_GIT_BRANCH
+fi
+
+if [ -n "${ADU_GIT_COMMIT}" ]; then
+    export ADU_GIT_COMMIT
 fi
 
 if [ -n "${DO_SRC_URI}" ]; then
     export DO_SRC_URI
 fi
 
-if [ -n "${ADUC_DELTA_SRC_URI}" ]; then
-    export ADUC_DELTA_SRC_URI
+if [ -n "${DO_GIT_BRANCH}" ]; then
+    export DO_GIT_BRANCH
+fi
+
+if [ -n "${DO_GIT_COMMIT}" ]; then
+    export DO_GIT_COMMIT
+fi
+
+if [ -n "${ADU_DELTA_SRC_URI}" ]; then
+    export ADU_DELTA_SRC_URI
+fi
+
+if [ -n "${ADU_DELTA_GIT_BRANCH}" ]; then
+    export ADU_DELTA_GIT_BRANCH
+fi
+
+if [ -n "${ADU_DELTA_GIT_COMMIT}" ]; then
+    export ADU_DELTA_GIT_COMMIT
 fi
 
 if [ -n "${VERSION}" ]; then
@@ -139,7 +199,7 @@ fi
 export SSTATE_DIR=$BUILD_DIR/sstate-cache
 
 # We need to tell bitbake about any env vars it should read in.
-export BB_ENV_EXTRAWHITE="$BB_ENV_EXTRAWHITE ADUC_GIT_BRANCH ADUC_SRC_URI DO_SRC_URI ADUC_DELTA_SRC_URI BUILD_TYPE ADU_SOFTWARE_VERSION ADUC_PRIVATE_KEY ADUC_PRIVATE_KEY_PASSWORD SSTATE_DIR"
+export BB_ENV_EXTRAWHITE="$BB_ENV_EXTRAWHITE ADU_GIT_BRANCH ADU_SRC_URI ADU_GIT_COMMIT DO_GIT_BRANCH DO_SRC_URI DO_GIT_COMMIT ADU_DELTA_GIT_BRANCH ADU_DELTA_SRC_URI ADU_DELTA_GIT_COMMIT BUILD_TYPE ADU_SOFTWARE_VERSION ADUC_PRIVATE_KEY ADUC_PRIVATE_KEY_PASSWORD SSTATE_DIR"
 source $ROOT_DIR/yocto/poky/oe-init-build-env $BUILD_DIR
 
 if [[ $BUILD_CORE_IMAGE_ONLY == 1 ]]; then

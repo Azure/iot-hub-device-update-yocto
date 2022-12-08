@@ -36,42 +36,54 @@ parameters:
   values:
   - honister
   - user/nox-msft/initial
-- name: adu_uri
-  displayName: ADU Uri
+- name: adu_src_uri
+  displayName: ADU URI
   type: string
-  default: "gitsm://github.com/azure/iot-hub-device-update;tag=v1.0.0"
-- name: adu_branch
-  displayName: ADU Branch Name
-  type: string
-  default: main
-  values:
-    - main
-    - develop
-- name: do_uri
-  displayName: Delivery Optimization Uri
-  type: string
-  default: "gitsm://github.com/microsoft/do-client.git;tag=v1.0.0"
-- name: do_branch
-  displayName: Delivery Optimization Branch
+  default: "gitsm://github.com/azure/iot-hub-device-update"
+- name: adu_git_branch
+  displayName: ADU Git branch Name
   type: string
   default: main
   values:
     - main
     - develop
-- name: adu_delta_uri
-  displayName: Device Update Delta Diff Uri
+- name: adu_git_commit
+  displayName: ADU Git commit 
+  type: string
+  default: 33554d29476eab2447234528c8aed186e2b6423d
+- name: do_src_uri
+  displayName: Delivery Optimization URI
+  type: string
+  default: "gitsm://github.com/microsoft/do-client.git"
+- name: do_git_branch
+  displayName: Delivery Optimization Git branch name
+  type: string
+  default: main
+  values:
+    - main
+    - develop
+- name: do_git_commit
+  displayName: Delivery Optimization Git commit 
+  type: string
+  default: b61de2d347c8032562056b18f90ec710e531baf8
+- name: adu_delta_src_uri
+  displayName: Device Update Delta Diff URI
   type: string
   default: gitsm://github.com/azure/iot-hub-device-update-delta
-- name: adu_delta_branch
+- name: adu_delta_git_branch
   displayName: Device Update Delta Diff Branch
   type: string
   default: main
   values:
     - main
     - develop
+- name: adu_delta_git_commit
+  displayName: Device Update Delta Diff Git commit 
+  type: string
+  default: 57efe4360f52b297ae54323271c530239fb1d1c7
 
 #
-# Below, we're selecting variable group based on buid_env parameter above.
+# Below, we're selecting variable group based on build_env parameter above.
 # 
 # The variable groups are defined in Pipelines/Library.
 # To create new group, follow the group naming convention below:
@@ -83,18 +95,24 @@ variables:
     value: ${{ parameters.yocto_release }}
   - name: meta_layer_branch
     value: ${{ parameters.meta_layer_branch }}
-  - name: adu_uri
-    value: ${{ parameters.adu_uri }}
-  - name: adu_branch
-    value: ${{ parameters.adu_branch }}
-  - name: do_uri
-    value: ${{ parameters.do_uri }}
-  - name: do_branch
-    value: ${{ parameters.do_branch }}
-  - name: adu_delta_uri
-    value: ${{ parameters.adu_delta_uri }}
-  - name: adu_delta_branch
-    value: ${{ parameters.adu_delta_branch }}
+  - name: adu_src_uri
+    value: ${{ parameters.adu_src_uri }}
+  - name: adu_git_branch
+    value: ${{ parameters.adu_git_branch }}
+  - name: adu_git_commit
+    value: ${{ parameters.adu_git_commit }}
+  - name: do_src_uri
+    value: ${{ parameters.do_src_uri }}
+  - name: do_git_branch
+    value: ${{ parameters.do_git_branch }}
+  - name: do_git_commit
+    value: ${{ parameters.do_git_commit }}
+  - name: adu_delta_src_uri
+    value: ${{ parameters.adu_delta_src_uri }}
+  - name: adu_delta_git_branch
+    value: ${{ parameters.adu_delta_git_branch }}
+  - name: adu_delta_git_commit
+    value: ${{ parameters.adu_delta_git_commit }}
   - name: build_env
     value: ${{ parameters.build_env }}
   - name: majorVersion
