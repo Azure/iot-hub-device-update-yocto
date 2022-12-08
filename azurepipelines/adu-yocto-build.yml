@@ -82,7 +82,7 @@ parameters:
   type: string
   default: 57efe4360f52b297ae54323271c530239fb1d1c7
 - name: build_args
-  displayName:: Additional build arguments
+  displayName: Additional build arguments
   type: string
 
 #
