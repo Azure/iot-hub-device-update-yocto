@@ -39,6 +39,9 @@ Please note that, at the time of this writing, we only support `honister` releas
 - Clone the Yocto (Poky) project
     
     ```shell
+    yocto_release=honister
+    adu_release=main
+    
     # Clone project with Yocto configuration files
     git clone <github url> -b <branchname> $proj_root
 
@@ -66,15 +69,15 @@ Please note that, at the time of this writing, we only support `honister` releas
     ```
 - Clone the Azure Device Update meta layer.
     ```shell
-    git clone --depth 1 --branch $yocto_release git://github.com/nox-msft/meta-azure-device-update
+    git clone --branch $adu_release http://github.com/nox-msft/meta-azure-device-update
     ```
 - Clone the IoT Hub Device Update Delta meta layer.
     ```shell
-    git clone --depth 1 --branch $yocto_release git://github.com/nox-msft/meta-iot-hub-device-update-delta
+    git clone --branch $adu_release http://github.com/nox-msft/meta-iot-hub-device-update-delta
     ```
 - Clone the Raspberry Pi with ADU meta layer.
     ```shell
-    git clone --depth 1 --branch $yocto_release git://github.com/nox-msft/meta-raspberrypi-adu
+    git clone --branch $adu_release http://github.com/nox-msft/meta-raspberrypi-adu
     ```
 
 ### How To Build The Project Locally
@@ -103,4 +106,26 @@ source oe-init-build-env
 # Run from project root folder
 ./scripts/build.sh -c -t $BUILD_TYPE -v $BUILD_NUMBER -o $BUILD_OUTPUT_DIR [optional build arguments]
          
+```
+
+For example, the following arguments were used to build the IoT Hub Device Update version 1.0.0
+
+```sh
+# Run following commands from <projectroot> directory
+yocto_release=honister
+adu_release=user/nox-msft/initial
+adu_src_uri="gitsm://github.com/azure/iot-hub-device-update"
+adu_git_branch=main
+adu_git_commit=33554d29476eab2447234528c8aed186e2b6423d
+do_src_uri="gitsm://github.com/microsoft/do-client.git"
+do_git_branch=main
+do_git_commit=b61de2d347c8032562056b18f90ec710e531baf8
+adu_delta_src_uri=gitsm://github.com/azure/iot-hub-device-update-delta
+adu_delta_git_branch=main
+adu_delta_git_commit=57efe4360f52b297ae54323271c530239fb1d1c7
+build_type=debug
+build_number=1.0.0
+build_output_dir=~/adu-yocto-$build_number
+
+./scripts/build.sh -c -t $build_type -v $build_number --adu-src-uri $adu_src_uri --adu-git-branch $adu_git_branch --adu-git-commit $adu_git_commit --do-src-uri $do_src_uri --do-git-branch $do_git_branch  --do-git-commit $do_git_commit --adu-delta-src-uri $adu_delta_src_uri --adu-delta-git-branch $adu_delta_git_branch --adu-delta-git-commit $adu_delta_git_commit -o $build_output_dir
 ```
