@@ -113,19 +113,27 @@ For example, the following arguments were used to build the IoT Hub Device Updat
 ```sh
 # Run following commands from <projectroot> directory
 yocto_release=honister
-adu_release=user/nox-msft/initial
+adu_release=honister
 adu_src_uri="gitsm://github.com/azure/iot-hub-device-update"
 adu_git_branch=main
 adu_git_commit=33554d29476eab2447234528c8aed186e2b6423d
 do_src_uri="gitsm://github.com/microsoft/do-client.git"
 do_git_branch=main
 do_git_commit=b61de2d347c8032562056b18f90ec710e531baf8
-adu_delta_src_uri=gitsm://github.com/azure/iot-hub-device-update-delta
+adu_delta_src_uri="gitsm://github.com/azure/iot-hub-device-update-delta"
 adu_delta_git_branch=main
-adu_delta_git_commit=57efe4360f52b297ae54323271c530239fb1d1c7
+adu_delta_git_commit=b581e92458f458969b427051a2ac5d18d3528dc6
 build_type=debug
 build_number=1.0.0
 build_output_dir=~/adu-yocto-$build_number
 
 ./scripts/build.sh -c -t $build_type -v $build_number --adu-src-uri $adu_src_uri --adu-git-branch $adu_git_branch --adu-git-commit $adu_git_commit --do-src-uri $do_src_uri --do-git-branch $do_git_branch  --do-git-commit $do_git_commit --adu-delta-src-uri $adu_delta_src_uri --adu-delta-git-branch $adu_delta_git_branch --adu-delta-git-commit $adu_delta_git_commit -o $build_output_dir
+```
+
+If success, the output image file (adu-base-image-raspberrypi3.wic.gz) and example .swu update file (adu-update-image-raspberrypi3.swu) shold be located in `$build_output_dir/tmp/deploy/images/raspberrypi3` directory
+
+```sh
+.
+├── adu-base-image-raspberrypi3.wic.gz
+├── adu-update-image-raspberrypi3.swu
 ```
