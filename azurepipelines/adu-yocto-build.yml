@@ -32,7 +32,7 @@ parameters:
 - name: meta_layer_branch
   displayName: Meta layers 'branch'
   type: string
-  default: user/nox-msft/initial
+  default: honister
   values:
   - honister
   - user/nox-msft/initial
