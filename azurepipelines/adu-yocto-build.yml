@@ -43,7 +43,7 @@ parameters:
 - name: adu_git_branch
   displayName: ADU Git branch Name
   type: string
-  default: main
+  default: develop
   values:
     - main
     - develop
@@ -80,7 +80,7 @@ parameters:
 - name: adu_delta_git_commit
   displayName: Device Update Delta Diff Git commit 
   type: string
-  default: 57efe4360f52b297ae54323271c530239fb1d1c7
+  default: b581e92458f458969b427051a2ac5d18d3528dc6
 
 # Below, we're selecting variable group based on build_env parameter above.
 # 
