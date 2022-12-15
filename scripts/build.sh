@@ -33,9 +33,9 @@ print_help()
 }
 
 # Defaults
-ADUC_GIT_BRANCH=main
-ADUC_GIT_COMMIT=33554d29476eab2447234528c8aed186e2b6423d
-ADUC_SRC_URI=gitsm://github.com/Azure/iot-hub-device-update
+ADU_GIT_BRANCH=main
+ADU_GIT_COMMIT=33554d29476eab2447234528c8aed186e2b6423d
+ADU_SRC_URI=gitsm://github.com/Azure/iot-hub-device-update
 
 DO_GIT_BRANCH=main
 DO_GIT_COMMIT=b61de2d347c8032562056b18f90ec710e531baf8
@@ -62,15 +62,15 @@ while [[ $1 != "" ]]; do
         ;;
     --adu-git-branch)
         shift
-        ADUC_GIT_BRANCH=$1
+        ADU_GIT_BRANCH=$1
         ;;
     --adu-src-uri)
         shift
-        ADUC_SRC_URI=$1
+        ADU_SRC_URI=$1
         ;;
     --adu-git-commit)
         shift
-        ADUC_GIT_COMMIT=$1
+        ADU_GIT_COMMIT=$1
         ;;
     --do-git-branch)
         shift
