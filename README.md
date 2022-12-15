@@ -139,6 +139,6 @@ If success, the output image file (adu-base-image-raspberrypi3.wic.gz) and examp
 ```
 
 ## Build Pipelines Status
-| Branch | Status |
-|---|---|
-| honister | [![Build Status](https://dev.azure.com/azure-device-update/adu-linux-client/_apis/build/status/Nox-MSFT.iot-hub-device-update-yocto?branchName=honister)](https://dev.azure.com/azure-device-update/adu-linux-client/_build/latest?definitionId=57&branchName=honister)|
+| Board | Branch | Status |
+|---|---|---|
+| Raspberry Pi 3 | honister | [![Build Status](https://dev.azure.com/azure-device-update/adu-linux-client/_apis/build/status/Nox-MSFT.iot-hub-device-update-yocto?branchName=honister)](https://dev.azure.com/azure-device-update/adu-linux-client/_build/latest?definitionId=57&branchName=honister)|
