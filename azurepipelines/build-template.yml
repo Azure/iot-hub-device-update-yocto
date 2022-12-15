@@ -1,0 +1,94 @@
+jobs:
+  - job: build_yocto
+    displayName: Build Yocto images
+    pool:
+      name: 1es_hosted_yocto_build
+    timeoutInMinutes: 960
+    steps:
+      # NOTE: There is a bug where multi-repo checkout will give warnings
+      # https://github.com/microsoft/azure-pipelines-yaml/issues/403
+      - checkout: self # Checkout this repo (adu-yocto-build)
+        path: adu-yocto-build
+        submodules: recursive
+        # Clean pull of the repository and remove any files not tracked by git.
+        clean: true
+        # Only fetch limited history (more efficient)
+        fetchDepth: 1
+
+      - bash: git clone --depth 1 --branch $(yocto_release) git://git.yoctoproject.org/poky
+        displayName: "Clone poky"
+        workingDirectory: "$(Pipeline.Workspace)/adu-yocto-build/yocto"
+
+      - bash: git clone --depth 1 --branch $(yocto_release)  https://github.com/sbabic/meta-swupdate
+        displayName: "Clone meta-swupdate"
+        workingDirectory: "$(Pipeline.Workspace)/adu-yocto-build/yocto"
+
+      - bash: git clone --depth 1 --branch $(yocto_release)  git://git.openembedded.org/meta-openembedded
+        displayName: "Clone meta-openembedded"
+        workingDirectory: "$(Pipeline.Workspace)/adu-yocto-build/yocto"
+
+      - bash: git clone --depth 1 --branch $(yocto_release)  git://git.yoctoproject.org/meta-raspberrypi
+        displayName: "Clone meta-raspberrypi"
+        workingDirectory: "$(Pipeline.Workspace)/adu-yocto-build/yocto"
+
+      - bash: git clone --depth 1 --branch $(meta_layer_branch)  https://github.com/nox-msft/meta-azure-device-update
+        displayName: "Clone meta-azure-device-update"
+        workingDirectory: "$(Pipeline.Workspace)/adu-yocto-build/yocto"
+
+      - bash: git clone --depth 1 --branch $(meta_layer_branch)  https://github.com/nox-msft/meta-iot-hub-device-update-delta
+        displayName: "Clone meta-iot-hub-device-update-delta"
+        workingDirectory: "$(Pipeline.Workspace)/adu-yocto-build/yocto"
+
+      - bash: git clone --depth 1 --branch $(meta_layer_branch)  https://github.com/nox-msft/meta-raspberrypi-adu
+        displayName: "Clone meta-raspberrypi-adu"
+        workingDirectory: "$(Pipeline.Workspace)/adu-yocto-build/yocto"
+
+      - bash: |
+          sudo apt-get update
+        displayName: Update apt package repositories
+        workingDirectory: "$(Pipeline.Workspace)"
+        failOnStderr: true
+
+      - bash: |
+          echo 'debconf debconf/frontend select Noninteractive' | sudo debconf-set-selections
+          sudo apt-get install -y -q zstd liblz4-tool
+        displayName: Install Honister build dependencies (zstd, liblz4-tool)
+        workingDirectory: "$(Pipeline.Workspace)"
+        failOnStderr: true
+        
+      - task: Bash@3
+        displayName: "Run Yocto build"
+        inputs:
+          targetType: "filePath"
+          filePath: "$(Pipeline.Workspace)/adu-yocto-build/scripts/build.sh"
+          arguments: '-c -t $(build_type) -v $(Build.BuildNumber) --adu-src-uri $(adu_src_uri) --adu-git-branch $(adu_git_branch) --adu-git-commit $(adu_git_commit) --do-src-uri $(do_src_uri) --do-git-branch $(do_git_branch)  --do-git-commit $(do_git_commit) --adu-delta-src-uri $(adu_delta_src_uri) --adu-delta-git-branch $(adu_delta_git_branch) --adu-delta-git-commit $(adu_delta_git_commit) -o $(Build.BinariesDirectory) $(build_args)'
+          workingDirectory: $(Pipeline.Workspace)
+
+      # Copy built artifacts to a staging directory for publishing.
+      - bash: |
+          rm -rf $(Build.ArtifactStagingDirectory)/*
+          mkdir -p $(Build.ArtifactStagingDirectory)/images/raspberrypi3
+          cp $(Build.BinariesDirectory)/build/tmp/deploy/images/raspberrypi3/adu-base-image-raspberrypi3.wic.gz \
+            $(Build.ArtifactStagingDirectory)/images/raspberrypi3/adu-base-image-raspberrypi3-$(Build.BuildNumber).wic.gz
+          cp $(Build.BinariesDirectory)/build//tmp/deploy/images/raspberrypi3/adu-base-image-raspberrypi3.wic.bmap \
+            $(Build.ArtifactStagingDirectory)/images/raspberrypi3/adu-base-image-raspberrypi3-$(Build.BuildNumber).wic.bmap
+          cp $(Build.BinariesDirectory)/build/tmp/deploy/images/raspberrypi3/adu-update-image-raspberrypi3.swu \
+            $(Build.ArtifactStagingDirectory)/images/raspberrypi3/adu-update-image-raspberrypi3-$(Build.BuildNumber).swu
+          mkdir -p $(Build.ArtifactStagingDirectory)/bin/raspberrypi3
+          cp $(Build.BinariesDirectory)/build/tmp/work/raspberrypi3-poky-linux-gnueabi/adu-base-image/1.0-r0/rootfs/usr/bin/AducIotAgent $(Build.ArtifactStagingDirectory)/bin/raspberrypi3
+          cp $(Build.BinariesDirectory)/build/tmp/work/raspberrypi3-poky-linux-gnueabi/adu-base-image/1.0-r0/rootfs/usr/bin/$(doAgentBinaryName) $(Build.ArtifactStagingDirectory)/bin/raspberrypi3
+        workingDirectory: $(Build.ArtifactStagingDirectory)
+        displayName: "Stage build artifacts"
+        failOnStderr: true
+
+      - task: PublishBuildArtifacts@1
+        displayName: "Publish images"
+        inputs:
+          ArtifactName: images
+          PathtoPublish: "$(Build.ArtifactStagingDirectory)/images"
+
+      - task: PublishBuildArtifacts@1
+        displayName: "Publish binaries"
+        inputs:
+          ArtifactName: binaries
+          PathtoPublish: "$(Build.ArtifactStagingDirectory)/bin"
