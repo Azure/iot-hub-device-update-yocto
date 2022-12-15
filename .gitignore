@@ -1,0 +1,16 @@
+out/
+build/
+.vscode/
+yocto/bsdiff
+yocto/adu-linux-client
+yocto/do-client
+yocto/*adu-linux-client.tar.gz
+yocto/do-client.tar.gz
+yocto/rpi-build
+yocto/iot-hub-device-update-delta-*
+yocto/adu-linux-client
+adu-base-*image*.gz
+adu-update-*image*.swu
+build-*.sh
+drop-*.sh
+zip-*.sh

@@ -1,0 +1,35 @@
+resources:
+  # Specify the pipelines that should cause this pipeline to be queued.
+  pipelines:
+    # Queue this pipeline whenever the ADU private-preview repo is changed.
+    - pipeline: azure_adu_private_preview
+      source: Azure.iot-hub-device-update
+      trigger:
+        branches:
+          include:
+            - main
+
+  # repositories:
+  #   - repository: azure_adu_private_preview
+  #     type: github
+  #     endpoint: adu-linux-client
+  #     name: $(aduc_repo)
+  #     ref: $(aduc_branch)
+
+  #   - repository: iot_hub_device_update_delta
+  #     type: github
+  #     endpoint: github-connection-iot-hub-device-update-delta
+  #     name: $(aduc_delta_repo)
+  #     ref: $(aduc_delta_branch)
+      
+  #   - repository: microsoft_do_client
+  #     type: github
+  #     endpoint: github-connection-microsoft-do-client
+  #     name: $(do_repo)
+  #     ref: $(do_branch)
+  #     # DO tag: v1.0.0 (https://github.com/microsoft/do-client/commit/b61de2d347c8032562056b18f90ec710e531baf8)
+  #     version: b61de2d347c8032562056b18f90ec710e531baf8
+
+# reuse jobs from build-template.yml
+jobs:
+  - template: build-template.yml

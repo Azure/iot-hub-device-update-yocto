@@ -1,0 +1,136 @@
+# External variables set in the pipeline
+# preset_sources --The pre-configured build sources combination.
+#                  e.g. master, dev/adu-q2, release/v0.2.0-private-preview, etc.
+#
+# aduc_repo -- The github repository to use when building the ADU client.
+# aduc_branch -- The branch to use when building the ADU client.
+# do_repo -- The github repository to use when building the DO SDK and client.
+# do_branch -- The branch to use when building the DO SDK and client.
+# build_type -- The type of build to run. Debug, Release, RelWithDebInfo, MinSizeRel.
+# build_args -- Additional arguments to pass to build.sh.
+#               Note: for private preview, we must include --private-preview in 'build_args'
+#               to ensure that meta-azure-device-update produces the correct DO Agent name.
+#
+# doAgentBinaryName -- For must be 'docs' for private preview, 
+#                      or 'deliveryoptimization-agent' for 2021-q1 or public-preview.
+# 
+parameters:
+- name: build_env
+  displayName: Build environment
+  type: string
+  default: azure-iot-hub-device-update-1-0-0
+  values:
+  - azure-iot-hub-device-update-develop
+  - azure-iot-hub-device-update-1-0-0
+- name: yocto_release
+  displayName: Yocto release 'version'
+  type: string
+  default: honister
+  values:
+  - honister
+  - warrior
+- name: meta_layer_branch
+  displayName: Meta layers 'branch'
+  type: string
+  default: honister
+  values:
+  - honister
+  - user/nox-msft/initial
+- name: adu_src_uri
+  displayName: ADU URI
+  type: string
+  default: "gitsm://github.com/azure/iot-hub-device-update"
+- name: adu_git_branch
+  displayName: ADU Git branch Name
+  type: string
+  default: main
+  values:
+    - main
+    - develop
+- name: adu_git_commit
+  displayName: ADU Git commit 
+  type: string
+  default: 33554d29476eab2447234528c8aed186e2b6423d
+- name: do_src_uri
+  displayName: Delivery Optimization URI
+  type: string
+  default: "gitsm://github.com/microsoft/do-client.git"
+- name: do_git_branch
+  displayName: Delivery Optimization Git branch name
+  type: string
+  default: main
+  values:
+    - main
+    - develop
+- name: do_git_commit
+  displayName: Delivery Optimization Git commit 
+  type: string
+  default: b61de2d347c8032562056b18f90ec710e531baf8
+- name: adu_delta_src_uri
+  displayName: Device Update Delta Diff URI
+  type: string
+  default: gitsm://github.com/azure/iot-hub-device-update-delta
+- name: adu_delta_git_branch
+  displayName: Device Update Delta Diff Branch
+  type: string
+  default: main
+  values:
+    - main
+    - develop
+- name: adu_delta_git_commit
+  displayName: Device Update Delta Diff Git commit 
+  type: string
+  default: 57efe4360f52b297ae54323271c530239fb1d1c7
+
+# Below, we're selecting variable group based on build_env parameter above.
+# 
+# The variable groups are defined in Pipelines/Library.
+# To create new group, follow the group naming convention below:
+#            'yocto-reference-image-' + parameters.build_env 
+#
+variables:
+  - group: yocto-reference-image-${{ parameters.build_env }}
+  - name: yocto_release
+    value: ${{ parameters.yocto_release }}
+  - name: meta_layer_branch
+    value: ${{ parameters.meta_layer_branch }}
+  - name: adu_src_uri
+    value: ${{ parameters.adu_src_uri }}
+  - name: adu_git_branch
+    value: ${{ parameters.adu_git_branch }}
+  - name: adu_git_commit
+    value: ${{ parameters.adu_git_commit }}
+  - name: do_src_uri
+    value: ${{ parameters.do_src_uri }}
+  - name: do_git_branch
+    value: ${{ parameters.do_git_branch }}
+  - name: do_git_commit
+    value: ${{ parameters.do_git_commit }}
+  - name: adu_delta_src_uri
+    value: ${{ parameters.adu_delta_src_uri }}
+  - name: adu_delta_git_branch
+    value: ${{ parameters.adu_delta_git_branch }}
+  - name: adu_delta_git_commit
+    value: ${{ parameters.adu_delta_git_commit }}
+  - name: build_env
+    value: ${{ parameters.build_env }}
+  - name: majorVersion
+    value: 1
+  - name: minorVersion
+    value: 0
+
+# Set build name
+name: ${{ variables.majorVersion }}.${{ variables.minorVersion }}.$(BuildID).$(rev:r)
+
+#
+# Note: some build environment may requires hard-coded commit hash# (ADO Pipeline limitation) for some github repository.
+# This can be achieved by specified the hard-coded commit hash# in 'version' parameter.
+# See resources-template-azure-adu-private-preview-dev-active.yml for example.
+#
+# This require a corresponding resources-template file with name matching selected build_env parameter.
+#
+# To allow running pipeline manually with any desired commit hash#, the custom resources template can be select.
+# Then select specific commit using the Resources UI.
+#
+extends:
+  template: resources-template-${{ variables.build_env }}.yml
