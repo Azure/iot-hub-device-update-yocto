@@ -108,15 +108,16 @@ source oe-init-build-env
          
 ```
 
-For example, the following arguments were used to build the IoT Hub Device Update version 1.0.0
+For example, the following arguments were used to build the IoT Hub Device Update from the ['develop'](https://github.com/Azure/iot-hub-device-update/tree/e099aaca0ad2b8849de24a13b1aa8e3ddf009251) branch at the commit#e099aac
 
 ```sh
 # Run following commands from <projectroot> directory
 yocto_release=honister
 adu_release=honister
 adu_src_uri="gitsm://github.com/azure/iot-hub-device-update"
-adu_git_branch=main
-adu_git_commit=33554d29476eab2447234528c8aed186e2b6423d
+# NOTE: Must specify the specific 'branch' and 'commit' for iot-hub-device-update here
+adu_git_branch=develop
+adu_git_commit=e099aaca0ad2b8849de24a13b1aa8e3ddf009251
 do_src_uri="gitsm://github.com/microsoft/do-client.git"
 do_git_branch=main
 do_git_commit=b61de2d347c8032562056b18f90ec710e531baf8
@@ -124,8 +125,8 @@ adu_delta_src_uri="gitsm://github.com/azure/iot-hub-device-update-delta"
 adu_delta_git_branch=main
 adu_delta_git_commit=b581e92458f458969b427051a2ac5d18d3528dc6
 build_type=debug
-build_number=1.0.0
-build_output_dir=~/adu-yocto-$build_number
+build_number=1.0.1
+build_output_dir=~/adu-yocto-build-output
 
 ./scripts/build.sh -c -t $build_type -v $build_number --adu-src-uri $adu_src_uri --adu-git-branch $adu_git_branch --adu-git-commit $adu_git_commit --do-src-uri $do_src_uri --do-git-branch $do_git_branch  --do-git-commit $do_git_commit --adu-delta-src-uri $adu_delta_src_uri --adu-delta-git-branch $adu_delta_git_branch --adu-delta-git-commit $adu_delta_git_commit -o $build_output_dir
 ```
