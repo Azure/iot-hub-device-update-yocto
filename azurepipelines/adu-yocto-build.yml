@@ -50,7 +50,7 @@ parameters:
 - name: adu_git_commit
   displayName: ADU Git commit 
   type: string
-  default: 33554d29476eab2447234528c8aed186e2b6423d
+  default: e099aaca0ad2b8849de24a13b1aa8e3ddf009251
 - name: do_src_uri
   displayName: Delivery Optimization URI
   type: string
