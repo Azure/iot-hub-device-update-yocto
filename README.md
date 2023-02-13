@@ -69,15 +69,15 @@ Please note that, at the time of this writing, we only support `honister` releas
     ```
 - Clone the Azure Device Update meta layer.
     ```shell
-    git clone --branch $adu_release http://github.com/nox-msft/meta-azure-device-update
+    git clone --branch $adu_release http://github.com/azure/meta-azure-device-update
     ```
 - Clone the IoT Hub Device Update Delta meta layer.
     ```shell
-    git clone --branch $adu_release http://github.com/nox-msft/meta-iot-hub-device-update-delta
+    git clone --branch $adu_release http://github.com/azure/meta-iot-hub-device-update-delta
     ```
 - Clone the Raspberry Pi with ADU meta layer.
     ```shell
-    git clone --branch $adu_release http://github.com/nox-msft/meta-raspberrypi-adu
+    git clone --branch $adu_release http://github.com/azure/meta-raspberrypi-adu
     ```
 
 ### How To Build The Project Locally
@@ -142,4 +142,4 @@ If success, the output image file (adu-base-image-raspberrypi3.wic.gz) and examp
 ## Build Pipelines Status
 | Board | Branch | Status |
 |---|---|---|
-| Raspberry Pi 3 | honister | [![Build Status](https://dev.azure.com/azure-device-update/adu-linux-client/_apis/build/status/Nox-MSFT.iot-hub-device-update-yocto?branchName=honister)](https://dev.azure.com/azure-device-update/adu-linux-client/_build/latest?definitionId=57&branchName=honister)|
+| Raspberry Pi 3 | honister | [![Build Status](https://dev.azure.com/azure-device-update/adu-linux-client/_apis/build/status/azure.iot-hub-device-update-yocto?branchName=honister)](https://dev.azure.com/azure-device-update/adu-linux-client/_build/latest?definitionId=57&branchName=honister)|
