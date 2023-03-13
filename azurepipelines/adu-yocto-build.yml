@@ -35,7 +35,6 @@ parameters:
   default: honister
   values:
   - honister
-  - user/nox-msft/initial
 - name: adu_src_uri
   displayName: ADU URI
   type: string
