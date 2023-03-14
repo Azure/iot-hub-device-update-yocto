@@ -31,15 +31,15 @@ jobs:
         displayName: "Clone meta-raspberrypi"
         workingDirectory: "$(Pipeline.Workspace)/adu-yocto-build/yocto"
 
-      - bash: git clone --depth 1 --branch $(meta_layer_branch)  https://github.com/nox-msft/meta-azure-device-update
+      - bash: git clone --depth 1 --branch $(meta_layer_branch)  https://github.com/azure/meta-azure-device-update
         displayName: "Clone meta-azure-device-update"
         workingDirectory: "$(Pipeline.Workspace)/adu-yocto-build/yocto"
 
-      - bash: git clone --depth 1 --branch $(meta_layer_branch)  https://github.com/nox-msft/meta-iot-hub-device-update-delta
+      - bash: git clone --depth 1 --branch $(meta_layer_branch)  https://github.com/azure/meta-iot-hub-device-update-delta
         displayName: "Clone meta-iot-hub-device-update-delta"
         workingDirectory: "$(Pipeline.Workspace)/adu-yocto-build/yocto"
 
-      - bash: git clone --depth 1 --branch $(meta_layer_branch)  https://github.com/nox-msft/meta-raspberrypi-adu
+      - bash: git clone --depth 1 --branch $(meta_layer_branch)  https://github.com/azure/meta-raspberrypi-adu
         displayName: "Clone meta-raspberrypi-adu"
         workingDirectory: "$(Pipeline.Workspace)/adu-yocto-build/yocto"
 
