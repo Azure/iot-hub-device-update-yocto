@@ -12,13 +12,13 @@
 #               to ensure that meta-azure-device-update produces the correct DO Agent name.
 #
 # doAgentBinaryName -- For must be 'docs' for private preview, 
-#                      or 'deliveryoptimization-agent' for 2021-q1 or public-preview.
+#                      or 'deliveryoptimization-agent' for 1.0.0 or later.
 # 
 parameters:
 - name: build_env
   displayName: Build environment
   type: string
-  default: azure-iot-hub-device-update-1-0-0
+  default: azure-iot-hub-device-update-develop
   values:
   - azure-iot-hub-device-update-develop
   - azure-iot-hub-device-update-1-0-0
@@ -35,7 +35,6 @@ parameters:
   default: honister
   values:
   - honister
-  - user/nox-msft/initial
 - name: adu_src_uri
   displayName: ADU URI
   type: string
