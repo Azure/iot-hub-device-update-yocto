@@ -1,0 +1,229 @@
+# E2E test pipeline - performs end-to-end tests on the following platforms
+#  - Ubuntu 18.04
+
+resources:
+  containers:
+    - container: ubuntu
+      image: ubuntu:18.04
+
+parameters:
+  - name: SKIP_TEARDOWN
+    displayName: "Leave test infrastructure in-place"
+    type: boolean
+    default: false
+
+variables:
+  SKIP_TEARDOWN: ${{ parameters.SKIP_TEARDOWN }}
+  E2E_WORKING_DIR: $(Build.SourcesDirectory)/azurepipelines/e2e_test
+
+name: "Yocto E2E Automated Test Run"
+
+stages:
+  - stage: ImportYoctoUpdate
+    displayName: Package and Import the New Yocto Update
+    jobs:
+      - job: ImportUpdate
+        pool:
+          vmImage: "ubuntu-18.04"
+        steps:
+          - task: UsePythonVersion@0
+            displayName: Set the python version to Python 3.11
+            inputs:
+              versionSpec: 3.11
+
+          - script: |
+              python -m pip install -r scripts/testingtoolkit/requirements.txt
+            workingDirectory: $(E2E_WORKING_DIR)
+            displayName: Installing the toolkit dependencies
+            continueOnError: False
+
+          - task: PythonScript@0
+            displayName: Run the script to create and upload the update
+            continueOnError: True
+            inputs:
+              scriptSource: "filePath"
+              scriptPath: "$(E2E_WORKING_DIR)/scripts/add_device_to_adu_group.py"
+              workingDirectory: $(E2E_WORKING_DIR)
+            env:
+              IOTHUB_URL: $(IOTHUB_URL)
+              IOTHUB_CONNECTION_STRING: $(IOTHUB_CONNECTION_STRING)
+              ADU_ENDPOINT: $(ADU_ENDPOINT)
+              ADU_INSTANCE_ID: $(ADU_INSTANCE_ID)
+              AAD_REGISTRAR_CLIENT_ID: $(AAD_REGISTRAR_CLIENT_ID)
+              AAD_REGISTRAR_TENANT_ID: $(AAD_REGISTRAR_TENANT_ID)
+              AAD_CLIENT_SECRET: $(AAD_CLIENT_SECRET)
+
+          - task: PythonScript@0
+            displayName: Run script to test apt-deployment
+            continueOnError: True
+            inputs:
+              scriptSource: "filePath"
+              scriptPath: "$(E2E_WORKING_DIR)/$(scenarioPath)/apt_deployment.py"
+              workingDirectory: $(E2E_WORKING_DIR)
+            env:
+              IOTHUB_URL: $(IOTHUB_URL)
+              IOTHUB_CONNECTION_STRING: $(IOTHUB_CONNECTION_STRING)
+              ADU_ENDPOINT: $(ADU_ENDPOINT)
+              ADU_INSTANCE_ID: $(ADU_INSTANCE_ID)
+              AAD_REGISTRAR_CLIENT_ID: $(AAD_REGISTRAR_CLIENT_ID)
+              AAD_REGISTRAR_TENANT_ID: $(AAD_REGISTRAR_TENANT_ID)
+              AAD_CLIENT_SECRET: $(AAD_CLIENT_SECRET)
+
+          - task: PythonScript@0
+            displayName: Run script to test diagnostics
+            continueOnError: True
+            inputs:
+              scriptSource: "filePath"
+              scriptPath: "$(E2E_WORKING_DIR)/$(scenarioPath)/diagnostics.py"
+              workingDirectory: $(E2E_WORKING_DIR)
+            env:
+              IOTHUB_URL: $(IOTHUB_URL)
+              IOTHUB_CONNECTION_STRING: $(IOTHUB_CONNECTION_STRING)
+              ADU_ENDPOINT: $(ADU_ENDPOINT)
+              ADU_INSTANCE_ID: $(ADU_INSTANCE_ID)
+              AAD_REGISTRAR_CLIENT_ID: $(AAD_REGISTRAR_CLIENT_ID)
+              AAD_REGISTRAR_TENANT_ID: $(AAD_REGISTRAR_TENANT_ID)
+              AAD_CLIENT_SECRET: $(AAD_CLIENT_SECRET)
+
+          - task: PythonScript@0
+            displayName: Run script to test mcu
+            continueOnError: True
+            inputs:
+              scriptSource: "filePath"
+              scriptPath: "$(E2E_WORKING_DIR)/$(scenarioPath)/Multi-Component-Update.py"
+              workingDirectory: $(E2E_WORKING_DIR)
+            env:
+              IOTHUB_URL: $(IOTHUB_URL)
+              IOTHUB_CONNECTION_STRING: $(IOTHUB_CONNECTION_STRING)
+              ADU_ENDPOINT: $(ADU_ENDPOINT)
+              ADU_INSTANCE_ID: $(ADU_INSTANCE_ID)
+              AAD_REGISTRAR_CLIENT_ID: $(AAD_REGISTRAR_CLIENT_ID)
+              AAD_REGISTRAR_TENANT_ID: $(AAD_REGISTRAR_TENANT_ID)
+              AAD_CLIENT_SECRET: $(AAD_CLIENT_SECRET)
+
+          - task: PythonScript@0
+            displayName: Run script to test bundle-update
+            continueOnError: True
+            inputs:
+              scriptSource: "filePath"
+              scriptPath: "$(E2E_WORKING_DIR)/$(scenarioPath)/Bundle-update.py"
+              workingDirectory: $(E2E_WORKING_DIR)
+            env:
+              IOTHUB_URL: $(IOTHUB_URL)
+              IOTHUB_CONNECTION_STRING: $(IOTHUB_CONNECTION_STRING)
+              ADU_ENDPOINT: $(ADU_ENDPOINT)
+              ADU_INSTANCE_ID: $(ADU_INSTANCE_ID)
+              AAD_REGISTRAR_CLIENT_ID: $(AAD_REGISTRAR_CLIENT_ID)
+              AAD_REGISTRAR_TENANT_ID: $(AAD_REGISTRAR_TENANT_ID)
+              AAD_CLIENT_SECRET: $(AAD_CLIENT_SECRET)
+
+          - task: PythonScript@0
+            displayName: Run script to clean up the device
+            continueOnError: True
+            inputs:
+              scriptSource: "filePath"
+              scriptPath: "$(E2E_WORKING_DIR)/$(scenarioPath)/delete_device.py"
+              workingDirectory: $(E2E_WORKING_DIR)
+            env:
+              IOTHUB_URL: $(IOTHUB_URL)
+              IOTHUB_CONNECTION_STRING: $(IOTHUB_CONNECTION_STRING)
+              ADU_ENDPOINT: $(ADU_ENDPOINT)
+              ADU_INSTANCE_ID: $(ADU_INSTANCE_ID)
+              AAD_REGISTRAR_CLIENT_ID: $(AAD_REGISTRAR_CLIENT_ID)
+              AAD_REGISTRAR_TENANT_ID: $(AAD_REGISTRAR_TENANT_ID)
+              AAD_CLIENT_SECRET: $(AAD_CLIENT_SECRET)
+
+          - script: |
+              mkdir -p $(Build.ArtifactStagingDirectory)/testresults/
+              cp -R ./testresults/* $(Build.ArtifactStagingDirectory)/testresults/
+            displayName: Copy terraform state (vm)
+            workingDirectory: $(E2E_WORKING_DIR)
+
+          - task: PublishPipelineArtifact@1
+            inputs:
+              targetPath: "$(Build.ArtifactStagingDirectory)/testresults/"
+              artifact: "TestResults_$(distroName)"
+              publishLocation: "pipeline"
+
+          - task: PublishTestResults@2
+            inputs:
+              testRunner: JUnit
+              testResultsFiles: "$(E2E_WORKING_DIR)/testresults/*.xml"
+              failTaskOnFailedTests: false
+              testRunTitle: $(distroName)
+
+  - stage: TerraformDestroyVm
+    displayName: Tear down cloud resources (VMs) and destroy the resource group
+    dependsOn:
+      - TerraformSetup
+      - TerraformVMInitialization
+      - RunTestsAndPostResults
+    pool:
+      vmImage: "ubuntu-18.04"
+    variables:
+      TERRAFORM_RESOURCE_GROUP_NAME: $[ stageDependencies.TerraformSetup.TerraformInstall.outputs['resource_group_name_step.TERRAFORM_RESOURCE_GROUP_NAME'] ]
+    jobs:
+      - job: TerraformDestroy
+        strategy:
+          matrix:
+            ubuntu-18.04-amd64:
+              distroName: ubuntu-18.04-amd64
+            ubuntu-18.04-arm64:
+              distroName: ubuntu-18.04-arm64
+            ubuntu-20.04:
+              distroName: ubuntu-20.04-amd64
+            debian-10:
+              distroName: debian-10-amd64
+        steps:
+          - script: echo "$(TERRAFORM_RESOURCE_GROUP_NAME)"
+            displayName: Checking terraform resource group name
+          - script: |
+              sudo apt update && sudo apt install curl
+              curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+              sudo apt-add-repository "deb [arch=$(dpkg --print-architecture)] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+              sudo apt install terraform
+            displayName: Installing Terraform
+          - script: |
+              mkdir $(Pipeline.Workspace)/terraformStateVM_$(distroName)
+            displayName: Create the artifact directory
+            workingDirectory: $(Pipeline.Workspace)
+
+          - task: DownloadPipelineArtifact@2
+            inputs:
+              buildType: "current"
+              artifactName: "terraformStateVM_$(distroName)"
+              targetPath: "$(Pipeline.Workspace)/terraformStateVM_$(distroName)"
+            displayName: Downloading the terraform artifacts
+            continueOnError: false
+
+          - script: |
+              terraform init
+              terraform destroy -var client_id="$(TERRAFORM_CLIENT_ID)" -var client_secret="$(TERRAFORM_CLIENT_SECRET)" -var subscription_id="$(SUBSCRIPTION_ID)" -var tenant_id="$(TERRAFORM_TENANT_ID)" -var key_vault_id="$(Azure_Key_Vault_ID)" -var resource_group_name=$(TERRAFORM_RESOURCE_GROUP_NAME) -auto-approve || true
+            workingDirectory: $(Pipeline.Workspace)/terraformStateVM_$(distroName)
+            displayName: Destroy cloud resources (VM)
+            continueOnError: true
+
+  - stage: RG_Destroy
+    displayName: Destroys the Resource Group used for the End-To-End Test
+    dependsOn:
+      - TerraformSetup
+      - TerraformVMInitialization
+      - RunTestsAndPostResults
+      - TerraformDestroyVm
+    pool:
+      vmImage: "ubuntu-18.04"
+    variables:
+      TERRAFORM_RESOURCE_GROUP_NAME: $[ stageDependencies.TerraformSetup.TerraformInstall.outputs['resource_group_name_step.TERRAFORM_RESOURCE_GROUP_NAME'] ]
+    jobs:
+      - job: ResourceGroupDestroy
+        steps:
+          - task: AzureCLI@2
+            displayName: Cleanup All Test Infrastructure
+            condition: eq(variables['SKIP_TEARDOWN'], 'false')
+            inputs:
+              azureSubscription: $(SERVICE_CONNECTION_NAME)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                echo "Starting to delete the resource group"
+                az group delete -n $(TERRAFORM_RESOURCE_GROUP_NAME) --yes --no-wait
