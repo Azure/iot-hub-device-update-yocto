@@ -26,12 +26,12 @@ Before getting started with this project, please get yourself familiar with the 
 
 ### Get Source Code
 
-Please note that, at the time of this writing, we only support `honister` release of the Yocto Project. Keep in mind the following environment variables that will be referenced throughout this document:
+Please note that, at the time of this writing, we only support `kirkstone` release of the Yocto Project. Keep in mind the following environment variables that will be referenced throughout this document:
 
 
 | Variable Name | Description |
 |---|---|
-| $yocto_release | A name of the version of the Yocto Project used to build the images.<br/>(Only support `honister` at the moment) |
+| $yocto_release | A name of the version of the Yocto Project used to build the images.<br/>(Only support `kirkstone` at the moment) |
 | $proj_root | A root directory where this project will be cloned into.|
 
 
@@ -39,7 +39,7 @@ Please note that, at the time of this writing, we only support `honister` releas
 - Clone the Yocto (Poky) project
     
     ```shell
-    yocto_release=honister
+    yocto_release=kirkstone
     adu_release=main
     
     # Clone project with Yocto configuration files
@@ -101,7 +101,7 @@ sudo ./scripts/install-deps.h
 # Checkout a desired 'poky' branch
 cd yocto/poky
 git fetch
-git checkout -t origin/honister -b my-honister
+git checkout -t origin/kirkstone -b my-kirkstone
 git pull
 
 # Initialize build environment
@@ -120,23 +120,40 @@ For example, the following arguments were used to build the IoT Hub Device Updat
 
 ```sh
 # Run following commands from <projectroot> directory
-yocto_release=honister
-adu_release=honister
+yocto_release=kirkstone
+adu_release=kirkstone
+
 adu_src_uri="gitsm://github.com/azure/iot-hub-device-update"
+
 # NOTE: Must specify the specific 'branch' and 'commit' for iot-hub-device-update here
 adu_git_branch=develop
-adu_git_commit=e099aaca0ad2b8849de24a13b1aa8e3ddf009251
+adu_git_commit=4794e82716f0a3dd0d2ff441a114a4788bd09d01
+
 do_src_uri="gitsm://github.com/microsoft/do-client.git"
-do_git_branch=main
-do_git_commit=b61de2d347c8032562056b18f90ec710e531baf8
+do_git_branch=develop
+do_git_commit=6459cc59426d38990ed75a6f103460ae148a95db
+
 adu_delta_src_uri="gitsm://github.com/azure/iot-hub-device-update-delta"
 adu_delta_git_branch=main
 adu_delta_git_commit=b581e92458f458969b427051a2ac5d18d3528dc6
+
 build_type=debug
-build_number=1.0.1
+build_number=1.0.2
 build_output_dir=~/adu-yocto-build-output
 
-./scripts/build.sh -c -t $build_type -v $build_number --adu-src-uri $adu_src_uri --adu-git-branch $adu_git_branch --adu-git-commit $adu_git_commit --do-src-uri $do_src_uri --do-git-branch $do_git_branch  --do-git-commit $do_git_commit --adu-delta-src-uri $adu_delta_src_uri --adu-delta-git-branch $adu_delta_git_branch --adu-delta-git-commit $adu_delta_git_commit -o $build_output_dir
+./scripts/build.sh -c \
+  -t $build_type \
+  -v $build_number \
+  --adu-src-uri $adu_src_uri \
+  --adu-git-branch $adu_git_branch \
+  --adu-git-commit $adu_git_commit \
+  --do-src-uri $do_src_uri \
+  --do-git-branch $do_git_branch \
+  --do-git-commit $do_git_commit \
+  --adu-delta-src-uri $adu_delta_src_uri \
+  --adu-delta-git-branch $adu_delta_git_branch \
+  --adu-delta-git-commit $adu_delta_git_commit \
+  -o $build_output_dir
 ```
 
 If success, the output image file (adu-base-image-raspberrypi3.wic.gz) and example .swu update file (adu-update-image-raspberrypi3.swu) shold be located in `$build_output_dir/tmp/deploy/images/raspberrypi3` directory
@@ -151,4 +168,4 @@ If success, the output image file (adu-base-image-raspberrypi3.wic.gz) and examp
 
 | Board | Branch | Status |
 |---|---|---|
-| Raspberry Pi 3 | honister | [![Build Status](https://dev.azure.com/azure-device-update/adu-linux-client/_apis/build/status/azure.iot-hub-device-update-yocto?branchName=honister)](https://dev.azure.com/azure-device-update/adu-linux-client/_build/latest?definitionId=57&branchName=honister)|
+| Raspberry Pi 3 | kirkstone | [![Build Status](https://dev.azure.com/azure-device-update/adu-linux-client/_apis/build/status/azure.iot-hub-device-update-yocto?branchName=kirkstone)](https://dev.azure.com/azure-device-update/adu-linux-client/_build/latest?definitionId=57&branchName=kirkstone)|
