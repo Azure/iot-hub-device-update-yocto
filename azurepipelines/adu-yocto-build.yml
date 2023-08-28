@@ -25,15 +25,17 @@ parameters:
 - name: yocto_release
   displayName: Yocto release 'version'
   type: string
-  default: honister
+  default: kirkstone
   values:
+  - kirkstone
   - honister
   - warrior
 - name: meta_layer_branch
   displayName: Meta layers 'branch'
   type: string
-  default: honister
+  default: kirkstone
   values:
+  - kirkstone
   - honister
 - name: adu_src_uri
   displayName: ADU URI
