@@ -2,7 +2,7 @@ jobs:
   - job: build_yocto
     displayName: Build Yocto images
     pool:
-      name: 1es_hosted_yocto_build
+      name: 1es_hosted_pool_yocto
     timeoutInMinutes: 960
     steps:
       # NOTE: There is a bug where multi-repo checkout will give warnings
