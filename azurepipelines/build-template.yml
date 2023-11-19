@@ -2,7 +2,7 @@ jobs:
   - job: build_yocto
     displayName: Build Yocto images
     pool:
-      name: 1es_hosted_yocto_build
+      name: 1es_hosted_pool_yocto  
     timeoutInMinutes: 960
     steps:
       # NOTE: There is a bug where multi-repo checkout will give warnings
@@ -48,7 +48,11 @@ jobs:
         displayName: Update apt package repositories
         workingDirectory: "$(Pipeline.Workspace)"
         failOnStderr: true
-
+      - bash: |
+          sudo df -h /
+        displayName: "Disk space before build"
+        workingDirectory: "$(Pipeline.Workspace)"
+        failOnStderr: true
       - bash: |
           echo 'debconf debconf/frontend select Noninteractive' | sudo debconf-set-selections
           sudo apt-get install -y -q zstd liblz4-tool
