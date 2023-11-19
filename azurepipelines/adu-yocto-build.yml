@@ -46,10 +46,11 @@ parameters:
   values:
     - main
     - develop
+    - user/nihemstr/november-release-precheck
 - name: adu_git_commit
   displayName: ADU Git commit 
   type: string
-  default: e099aaca0ad2b8849de24a13b1aa8e3ddf009251
+  default: b160728641af554d9a477f48419aace9c0650cb9
 - name: do_src_uri
   displayName: Delivery Optimization URI
   type: string
