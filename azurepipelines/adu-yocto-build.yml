@@ -21,7 +21,6 @@ parameters:
   default: azure-iot-hub-device-update-develop
   values:
   - azure-iot-hub-device-update-develop
-  - azure-iot-hub-device-update-1-0-0
 - name: yocto_release
   displayName: Yocto release 'version'
   type: string
@@ -49,7 +48,7 @@ parameters:
 - name: adu_git_commit
   displayName: ADU Git commit 
   type: string
-  default: e099aaca0ad2b8849de24a13b1aa8e3ddf009251
+  default: 350a551dd9d3f5639eddceb75ef5b10e834865fe
 - name: do_src_uri
   displayName: Delivery Optimization URI
   type: string
@@ -64,7 +63,7 @@ parameters:
 - name: do_git_commit
   displayName: Delivery Optimization Git commit 
   type: string
-  default: b61de2d347c8032562056b18f90ec710e531baf8
+  default: f043b6bfaf6e4568f037b56460714bdeeec5400d
 - name: adu_delta_src_uri
   displayName: Device Update Delta Diff URI
   type: string
@@ -116,7 +115,7 @@ variables:
   - name: majorVersion
     value: 1
   - name: minorVersion
-    value: 0
+    value: 1
 
 # Set build name
 name: ${{ variables.majorVersion }}.${{ variables.minorVersion }}.$(BuildID).$(rev:r)
