@@ -45,7 +45,7 @@ Please note that, at the time of this writing, we only support `honister` releas
     # Clone project with Yocto configuration files
     git clone <github url> -b <branchname> $proj_root
 
-    cd $project_root/yocto
+    cd $proj_root/yocto
 
     # Clone the Yocto Project (poky) into 'yocto' dir
     git clone --depth 1 --branch $yocto_release git://git.yoctoproject.org/poky
@@ -96,7 +96,7 @@ For more information, see [Yocto Project Quick Build](https://docs.yoctoproject.
 
 ```sh
 # Install build dependencies
-sudo ./scripts/install-deps.h
+sudo ./scripts/install-deps.sh
 
 # Checkout a desired 'poky' branch
 cd yocto/poky
@@ -139,7 +139,7 @@ build_output_dir=~/adu-yocto-build-output
 ./scripts/build.sh -c -t $build_type -v $build_number --adu-src-uri $adu_src_uri --adu-git-branch $adu_git_branch --adu-git-commit $adu_git_commit --do-src-uri $do_src_uri --do-git-branch $do_git_branch  --do-git-commit $do_git_commit --adu-delta-src-uri $adu_delta_src_uri --adu-delta-git-branch $adu_delta_git_branch --adu-delta-git-commit $adu_delta_git_commit -o $build_output_dir
 ```
 
-If success, the output image file (adu-base-image-raspberrypi3.wic.gz) and example .swu update file (adu-update-image-raspberrypi3.swu) shold be located in `$build_output_dir/tmp/deploy/images/raspberrypi3` directory
+If success, the output image file (adu-base-image-raspberrypi3.wic.gz) and example .swu update file (adu-update-image-raspberrypi3.swu) shold be located in `$build_output_dir/build/tmp/deploy/images/raspberrypi3` directory
 
 ```sh
 .
