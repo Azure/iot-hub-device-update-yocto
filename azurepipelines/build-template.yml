@@ -50,7 +50,7 @@ jobs:
         inputs:
           targetType: "filePath"
           filePath: "./scripts/build.sh"
-          arguments: '-c -t $(build_type) -v $(Build.BuildNumber) --adu-src-uri $(adu_src_uri) --adu-git-branch $(adu_git_branch) --adu-git-commit $(adu_git_commit) --do-src-uri $(do_src_uri) --do-git-branch $(do_git_branch)  --do-git-commit $(do_git_commit) --adu-delta-src-uri $(adu_delta_src_uri) --adu-delta-git-branch $(adu_delta_git_branch) --adu-delta-git-commit $(adu_delta_git_commit) -o $(Build.BinariesDirectory) $(build_args)'
+          arguments: '-c -t MinSizeRel -v $(Build.BuildNumber) --adu-src-uri $(adu_src_uri) --adu-git-branch $(adu_git_branch) --adu-git-commit $(adu_git_commit) --do-src-uri $(do_src_uri) --do-git-branch $(do_git_branch)  --do-git-commit $(do_git_commit) --adu-delta-src-uri $(adu_delta_src_uri) --adu-delta-git-branch $(adu_delta_git_branch) --adu-delta-git-commit $(adu_delta_git_commit) -o $(Build.BinariesDirectory) $(build_args)'
           workingDirectory: $(Build.SourcesDirectory)
 
       # Copy built artifacts to a staging directory for publishing.
