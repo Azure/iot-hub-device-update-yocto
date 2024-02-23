@@ -74,12 +74,6 @@ parameters:
   type: string
   default: 77a120d03a8033126b22edd1667820e59bcf3f81
 
-# Below, we're selecting variable group based on build_env parameter above.
-# 
-# The variable groups are defined in Pipelines/Library.
-# To create new group, follow the group naming convention below:
-#            'yocto-reference-image-' + parameters.build_env 
-#
 variables:
   - group: yocto-reference-image
   - name: yocto_release
@@ -102,8 +96,6 @@ variables:
     value: ${{ parameters.adu_delta_git_branch }}
   - name: adu_delta_git_commit
     value: ${{ parameters.adu_delta_git_commit }}
-  - name: build_env
-    value: ${{ parameters.build_env }}
   - name: majorVersion
     value: 1
   - name: minorVersion
@@ -112,15 +104,5 @@ variables:
 # Set build name
 name: ${{ variables.majorVersion }}.${{ variables.minorVersion }}.$(BuildID).$(rev:r)
 
-#
-# Note: some build environment may requires hard-coded commit hash# (ADO Pipeline limitation) for some github repository.
-# This can be achieved by specified the hard-coded commit hash# in 'version' parameter.
-# See iot-hub-device-update-build.yml for example.
-#
-# This require a corresponding resources-template file with name matching selected build_env parameter.
-#
-# To allow running pipeline manually with any desired commit hash#, the custom resources template can be select.
-# Then select specific commit using the Resources UI.
-#
 extends:
   template: iot-hub-device-update-build.yml
