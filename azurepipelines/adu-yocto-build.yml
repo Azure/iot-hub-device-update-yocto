@@ -75,7 +75,6 @@ parameters:
   default: 77a120d03a8033126b22edd1667820e59bcf3f81
 
 variables:
-  - group: yocto-reference-image
   - name: yocto_release
     value: ${{ parameters.yocto_release }}
   - name: adu_src_uri
