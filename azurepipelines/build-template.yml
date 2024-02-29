@@ -56,16 +56,16 @@ jobs:
       # Copy built artifacts to a staging directory for publishing.
       - bash: |
           rm -rf $(Build.ArtifactStagingDirectory)/*
-          mkdir -p $(Build.ArtifactStagingDirectory)/images/raspberrypi3
-          cp $(Build.BinariesDirectory)/build/tmp/deploy/images/raspberrypi3/adu-base-image-raspberrypi3.wic.gz \
-            $(Build.ArtifactStagingDirectory)/images/raspberrypi3/adu-base-image-raspberrypi3-$(Build.BuildNumber).wic.gz
-          cp $(Build.BinariesDirectory)/build//tmp/deploy/images/raspberrypi3/adu-base-image-raspberrypi3.wic.bmap \
-            $(Build.ArtifactStagingDirectory)/images/raspberrypi3/adu-base-image-raspberrypi3-$(Build.BuildNumber).wic.bmap
-          cp $(Build.BinariesDirectory)/build/tmp/deploy/images/raspberrypi3/adu-update-image-raspberrypi3.swu \
-            $(Build.ArtifactStagingDirectory)/images/raspberrypi3/adu-update-image-raspberrypi3-$(Build.BuildNumber).swu
-          mkdir -p $(Build.ArtifactStagingDirectory)/bin/raspberrypi3
-          cp $(Build.BinariesDirectory)/build/tmp/work/raspberrypi3-poky-linux-gnueabi/adu-base-image/1.0-r0/rootfs/usr/bin/AducIotAgent $(Build.ArtifactStagingDirectory)/bin/raspberrypi3
-          cp $(Build.BinariesDirectory)/build/tmp/work/raspberrypi3-poky-linux-gnueabi/adu-base-image/1.0-r0/rootfs/usr/bin/$(doAgentBinaryName) $(Build.ArtifactStagingDirectory)/bin/raspberrypi3
+          mkdir -p $(Build.ArtifactStagingDirectory)/images/raspberrypi4
+          cp $(Build.BinariesDirectory)/build/tmp/deploy/images/raspberrypi4/adu-base-image-raspberrypi4.wic.gz \
+            $(Build.ArtifactStagingDirectory)/images/raspberrypi4/adu-base-image-raspberrypi4-$(Build.BuildNumber).wic.gz
+          cp $(Build.BinariesDirectory)/build//tmp/deploy/images/raspberrypi4/adu-base-image-raspberrypi4.wic.bmap \
+            $(Build.ArtifactStagingDirectory)/images/raspberrypi4/adu-base-image-raspberrypi4-$(Build.BuildNumber).wic.bmap
+          cp $(Build.BinariesDirectory)/build/tmp/deploy/images/raspberrypi4/adu-update-image-raspberrypi4.swu \
+            $(Build.ArtifactStagingDirectory)/images/raspberrypi4/adu-update-image-raspberrypi4-$(Build.BuildNumber).swu
+          mkdir -p $(Build.ArtifactStagingDirectory)/bin/raspberrypi4
+          cp $(Build.BinariesDirectory)/build/tmp/work/raspberrypi4-poky-linux-gnueabi/adu-base-image/1.0-r0/rootfs/usr/bin/AducIotAgent $(Build.ArtifactStagingDirectory)/bin/raspberrypi4
+          cp $(Build.BinariesDirectory)/build/tmp/work/raspberrypi4-poky-linux-gnueabi/adu-base-image/1.0-r0/rootfs/usr/bin/$(doAgentBinaryName) $(Build.ArtifactStagingDirectory)/bin/raspberrypi4
         workingDirectory: $(Build.ArtifactStagingDirectory)
         displayName: "Stage build artifacts"
         failOnStderr: true

@@ -139,7 +139,7 @@ while [[ $1 != "" ]]; do
     shift
 done
 
-export MACHINE=raspberrypi3
+export MACHINE=raspberrypi4-64
 export TEMPLATECONF=$ROOT_DIR/yocto/config-templates/$MACHINE
 
 if [ -n "${ADU_SRC_URI}" ]; then
@@ -189,6 +189,8 @@ export ADUC_PRIVATE_KEY_PASSWORD=$ADUC_KEY_DIR/priv.pass
 # Remove the conf dir before sourcing oe-init-build-env
 if [[ $CLEAN == "true" ]]; then
     rm -rf $BUILD_DIR/conf
+    # cp $ROOT_DIR/yocto/config-templates/raspberrypi4-64/local.conf $BUILD_DIR/conf
+    # cp $ROOT_DIR/yocto/config-templates/bblayers.conf $BUILD_DIR/conf
 fi
 
 # Remove all build output files for a full rebuild.
