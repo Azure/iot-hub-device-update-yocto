@@ -38,4 +38,5 @@ libncurses5-dev \
 tmux \
 bmap-tools \
 autoconf \
-autopoint
+autopoint \
+libmosquitto-dev

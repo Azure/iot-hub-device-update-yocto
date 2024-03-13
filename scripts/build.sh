@@ -32,27 +32,32 @@ print_help()
     echo "-h, --help                    Show this help message."
 }
 
-# Defaults
-ADU_GIT_BRANCH=main
-ADU_GIT_COMMIT=33554d29476eab2447234528c8aed186e2b6423d
-ADU_SRC_URI=gitsm://github.com/Azure/iot-hub-device-update
-
-DO_GIT_BRANCH=main
-DO_GIT_COMMIT=b61de2d347c8032562056b18f90ec710e531baf8
-DO_SRC_URI=gitsm://github.com/microsoft/do-client
-
-ADU_DELTA_GIT_BRANCH=main
-ADU_DELTA_GIT_COMMIT=57efe4360f52b297ae54323271c530239fb1d1c7
-ADU_DELTA_SRC_URI=gitsm://github.com/Azure/iot-hub-device-update-delta
-
+# Build Defaults
 BUILD_DIR=$ROOT_DIR/build
-CLEAN=false
 BUILD_TYPE=Debug
-REBUILD=false
+
+# Build Switches
 BUILD_CORE_IMAGE_ONLY=0
 BUILD_AZIOT_C_SDK_ONLY=0
 BUILD_ADU_DELTA_ONLY=0
 SET_ENV_ONLY=0
+REBUILD=false
+CLEAN=false
+
+# ADU Agent Passthroughs
+ADU_GIT_BRANCH=""
+ADU_SRC_URI=""
+ADU_GIT_COMMIT=""
+
+# Delivery Optimization Agent/SDK Passthrougs
+DO_GIT_BRANCH=""
+DO_SRC_URI=""
+DO_GIT_COMMIT=""
+
+# Delta Version Passthroughs
+ADU_DELTA_GIT_BRANCH=""
+ADU_DELTA_SRC_URI=""
+ADU_DELTA_GIT_COMMIT=""
 
 while [[ $1 != "" ]]; do
     case $1 in
@@ -127,10 +132,6 @@ while [[ $1 != "" ]]; do
         shift
         BUILD_DIR=$1
         ;;
-    -p | --private-preview)
-        shift
-        PRIVATE_PREVIEW=true
-        ;;
     *)
         print_help
         exit 1
@@ -144,42 +145,52 @@ export TEMPLATECONF=$ROOT_DIR/yocto/config-templates/$MACHINE
 
 if [ -n "${ADU_SRC_URI}" ]; then
     export ADU_SRC_URI
+    export BB_ENV_PASSTHROUGH_ADDITIONS="$BB_ENV_PASSTHROUGH_ADDITIONS ADU_SRC_URI"
 fi
 
 if [ -n "${ADU_GIT_BRANCH}" ]; then
     export ADU_GIT_BRANCH
+    export BB_ENV_PASSTHROUGH_ADDITIONS="$BB_ENV_PASSTHROUGH_ADDITIONS ADU_GIT_BRANCH"
 fi
 
 if [ -n "${ADU_GIT_COMMIT}" ]; then
     export ADU_GIT_COMMIT
+    export BB_ENV_PASSTHROUGH_ADDITIONS="$BB_ENV_PASSTHROUGH_ADDITIONS ADU_GIT_COMMIT"
 fi
 
 if [ -n "${DO_SRC_URI}" ]; then
     export DO_SRC_URI
+    export BB_ENV_PASSTHROUGH_ADDITIONS="$BB_ENV_PASSTHROUGH_ADDITIONS DO_SRC_URI"
 fi
 
 if [ -n "${DO_GIT_BRANCH}" ]; then
     export DO_GIT_BRANCH
+    export BB_ENV_PASSTHROUGH_ADDITIONS="$BB_ENV_PASSTHROUGH_ADDITIONS DO_GIT_BRANCH"
 fi
 
 if [ -n "${DO_GIT_COMMIT}" ]; then
     export DO_GIT_COMMIT
+    export BB_ENV_PASSTHROUGH_ADDITIONS="$BB_ENV_PASSTHROUGH_ADDITIONS DO_GIT_COMMIT"
 fi
 
 if [ -n "${ADU_DELTA_SRC_URI}" ]; then
     export ADU_DELTA_SRC_URI
+    export BB_ENV_PASSTHROUGH_ADDITIONS="$BB_ENV_PASSTHROUGH_ADDITIONS ADU_DELTA_SRC_URI"
 fi
 
 if [ -n "${ADU_DELTA_GIT_BRANCH}" ]; then
     export ADU_DELTA_GIT_BRANCH
+    export BB_ENV_PASSTHROUGH_ADDITIONS="$BB_ENV_PASSTHROUGH_ADDITIONS ADU_DELTA_GIT_BRANCH"
 fi
 
 if [ -n "${ADU_DELTA_GIT_COMMIT}" ]; then
     export ADU_DELTA_GIT_COMMIT
+    export BB_ENV_PASSTHROUGH_ADDITIONS="$BB_ENV_PASSTHROUGH_ADDITIONS ADU_DELTA_GIT_COMMIT"
 fi
 
 if [ -n "${VERSION}" ]; then
     export ADU_SOFTWARE_VERSION=$VERSION
+    export BB_ENV_PASSTHROUGH_ADDITIONS="$BB_ENV_PASSTHROUGH_ADDITIONS ADU_SOFTWARE_VERSION"
 fi
 
 ADUC_KEY_DIR=$(realpath $SCRIPT_DIR/../keys)
@@ -200,8 +211,8 @@ fi
 
 export SSTATE_DIR=$BUILD_DIR/sstate-cache
 
-# We need to tell bitbake about any env vars it should read in.
-export BB_ENV_PASSTHROUGH_ADDITIONS="$BB_ENV_PASSTHROUGH_ADDITIONS ADU_GIT_BRANCH ADU_SRC_URI ADU_GIT_COMMIT DO_GIT_BRANCH DO_SRC_URI DO_GIT_COMMIT ADU_DELTA_GIT_BRANCH ADU_DELTA_SRC_URI ADU_DELTA_GIT_COMMIT BUILD_TYPE ADU_SOFTWARE_VERSION ADUC_PRIVATE_KEY ADUC_PRIVATE_KEY_PASSWORD SSTATE_DIR"
+# Export the default bitbake pass throughs so they show up as needed
+export BB_ENV_PASSTHROUGH_ADDITIONS="$BB_ENV_PASSTHROUGH_ADDITIONS BUILD_TYPE ADUC_PRIVATE_KEY ADUC_PRIVATE_KEY_PASSWORD SSTATE_DIR"
 source $ROOT_DIR/yocto/poky/oe-init-build-env $BUILD_DIR
 
 if [[ $BUILD_CORE_IMAGE_ONLY == 1 ]]; then
