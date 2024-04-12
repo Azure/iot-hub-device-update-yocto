@@ -1,12 +1,14 @@
 # Building a Custom Linux-based System with Device Update for IotHub Agent using the Yocto Project
+> **DISCLAIMER:**  
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ## Introduction
 
-This repository contains a `Configuration Files` which hold various information that tells the Yocto build system what to build and put into the image to support Raspberry Pi 3B+ hardware.
+This repository is a tool for experimenting with the integration of Device Update with a Yocto build system. Within this repo there are scripts for helping with builds, a directory structure for supplying keys to the swupdate signing process, and the azurepipelines definitions which can be used for setting up an Azure Dev Ops pipeline for generating the proof of concept image. 
 
-The build system generates a base image and an update image (armv7l, or arm32), both containing the Device Update agent and its (runtime) dependencies.
+None of the instructions, Azure Pipelines, scripts, or process described here is intended for production use. Do not use this repository as a basis for a production pipeline for integrating images. There are no promises made about the security and stability of the pipeline held within this repository. 
 
-This is a showcase of Device Update's Image-based updating capability. 
+The repository and instructions create an image for the RaspberryPi 4 which can run script and image based updates using Device Update for IoT Hub. It's just to give you a taste of the power and utility of Device Update for IoT Hub.
 
 For more information about the Device Update for IoT Hub, see the link to the source code of [Device Update Agent](https://github.com/Azure/iot-hub-device-update)
 
@@ -17,138 +19,143 @@ Before getting started with this project, please get yourself familiar with the 
 - [The Yocto Project Software Overview](https://www.yoctoproject.org/software-overview/)
 - [The Device Update for IoTHub Overview](http://github.com/azure/iot-hub-device-update)
 
-## Getting Started
-
-- [Clone The Source Code](#clone-source-code)
-- [How Building The Project Locally](#how-to-build-the-project-locally)
-- [How To Build The Project using Azure DevOp Build Pipeline](#how-to-build-the-project-using-azure-devop-build-pipeline)
-
-
 ### Get Source Code
 
-Please note that, at the time of this writing, we only support `honister` release of the Yocto Project. Keep in mind the following environment variables that will be referenced throughout this document:
+Please note that, at the time of this writing, we only support `kirkstone` release of the Yocto Project. 
 
+The following variables are referenced in the below section setting up the build. 
 
 | Variable Name | Description |
 |---|---|
-| $yocto_release | A name of the version of the Yocto Project used to build the images.<br/>(Only support `honister` at the moment) |
-| $proj_root | A root directory where this project will be cloned into.|
+| $yocto_release | A name of the version of the Yocto Project used to build the images.<br/>(Only support `kirkstone` at the moment) |
+| $project_root  | A root directory where this project will be cloned into.|
+| $adu_release   | The release of Device Update you're planning on using (should default to `'main'`) | 
 
+You can either just include the string wholesale in the terminal (eg for `$yocto_release` just use `'kirkstone'`) or set the variable at the beginning and then copy the command from this screen.
 
+You can set a bash variable like `yocto_release` this:
+```shell
+yocto_release=kirkstone
+```
+and for `adu_release` like this: 
+```shell
+adu_release=main
+```
+and for `project_root` like this:
+```shell
+project_root=~/
+```
 
-- Clone the Yocto (Poky) project
+The first step for building the project is cloning this repository onto your device using the following command:
+
+1. Clone this repository onto your device:
     
+```shell
+git clone https://github.com/Azure/iot-hub-device-update-yocto -b <branchname> $proj_root
+```
+2. Once you've cloned the project you next need to change into our "working directory" where the individual layers (in Yocto these layers build up to an image like a cake... or foundation.. or cake). 
+```shell
+cd $proj_root/iot-hub-device-update/yocto 
+```
+3. Once you're in the `yocto` directory we need to check out the Yocto Build "engine" or base layer so we can build with it. 
+```shell
+git clone --depth 1 --branch $yocto_release git://git.yoctoproject.org/poky
+```
+4. Next we need to checkout the rest of the dependency layers into the `yocto` directory
+
+    1. Clone the SwUpdate meta layer 
     ```shell
-    yocto_release=honister
-    adu_release=main
-    
-    # Clone project with Yocto configuration files
-    git clone <github url> -b <branchname> $proj_root
-
-    cd $project_root/yocto
-
-    # Clone the Yocto Project (poky) into 'yocto' dir
-    git clone --depth 1 --branch $yocto_release git://git.yoctoproject.org/poky
-    ```
-
-- Clone SWUpdate meta layer. SWUpdate provides an image-based update that support dual-partition.
-  
-    ```shell
-    # Clone swupdate meta layer 
     git clone --depth 1 --branch $yocto_release  https://github.com/sbabic/meta-swupdate
     ```
 
-- Clone the Open Embedded meta layer. This layer include many modules (or layers) needed for building a Linux-base system.
-
+    2. Clone the Open Embedded meta layer. This layer include many modules (or layers) needed for building a Linux-base system.
     ```shell
     git clone --depth 1 --branch $yocto_release  git://git.openembedded.org/meta-openembedded
     ```
 
-- Clone the Raspberry Pi meta layer. Since, the reference image that we are building is for a Raspberry Pi 3B+ hardware.
-
+    3. Clone the Raspberry Pi meta layer. Since, the reference image that we are building is for a Raspberry Pi 4 hardware.
     ```shell
     git clone --depth 1 --branch $yocto_release git://git.yoctoproject.org/meta-raspberrypi
     ```
 
-- Clone the Azure Device Update meta layer.
+5. Within the same directory we are now going to include the Device Update for IotHub layers which builds Device Update and provides those artifacts for the `meta-raspberrypi-adu` layer which integrates Device Update and modifies the image build instructions within `meta-raspberrypi` to output the `adu-base-image-<machine-name>.wic.gz` and `adu-update-image-<machine-name>.swu` which can be used to test out Device Update for IotHub. For more information on these layers and their outputs please read the `README.md` in each of the repos. 
+
+    1. From within the `yocto` directory checkout `meta-azure-device-update` at the version of Device Update you plan to use in your test. 
 
     ```shell
     git clone --branch $adu_release http://github.com/azure/meta-azure-device-update
     ```
-
-- Clone the IoT Hub Device Update Delta meta layer.
-
+    2. From within the `yocto` directory checkout `meta-raspberrypi-adu` at the version of Device Update you plan to use in your test. 
+    ```shell
+    git clone --branch $adu_release http://github.com/azure/meta-raspberrypi-adu
+    ```
+    3. (optional) If you're planning on using delta updates you can checkout the `meta-iot-hub-device-update-delta` layer that integrates that functionality into that agent. Please read the `README.md` if you want to know more. 
     ```shell
     git clone --branch $adu_release http://github.com/azure/meta-iot-hub-device-update-delta
     ```
 
-- Clone the Raspberry Pi with ADU meta layer.
-  
-    ```shell
-    git clone --branch $adu_release http://github.com/azure/meta-raspberrypi-adu
-    ```
+Next we move on to how to build the project assuming you've setup the project like above instructions. If you don't follow the setup instructions you will have to make modifications to `scripts/build.sh` to make sure the build works. 
 
-### How To Build The Project Locally
+### Building The Project Locally
 
 #### Install Build Dependencies and Tools
 
-For more information, see [Yocto Project Quick Build](https://docs.yoctoproject.org/brief-yoctoprojectqs/index.html#yocto-project-quick-build)
+For more information on the Yocto build system, the open embedded base image, and example builds please see [Yocto Project Quick Build](https://docs.yoctoproject.org/brief-yoctoprojectqs/index.html#yocto-project-quick-build). 
 
-```sh
-# Install build dependencies
+Please look into `scripts/install-deps.sh` to determine what you may need to integrate into your build as you move forward with the project. 
+
+
+1. From the `project_root` please execute the following command in your terminal
+```shell
 sudo ./scripts/install-deps.h
-
-# Checkout a desired 'poky' branch
-cd yocto/poky
-git fetch
-git checkout -t origin/honister -b my-honister
-git pull
-
-# Initialize build environment
-source oe-init-build-env
 ```
+
+### Creating the Private Key for Sw Update Signing
+
+To create the `*.swu` file you will need to provide the build system with a private key and password file so that it can sign the generated image and then create the Sw Update file. This is REQUIRED for a Sw Update update to function. You MUST put the private key and password file inside of the `repo-root-directory/keys` directory. The build will break if you do not complete this step and your GitHub bug will elicit an exasperated sign from the developers of Device Update. Be warned. 
+
+You can find the instructions for generating the private key and creating the password file [here](./keys/README.md). 
+
 
 ### Build The Project
 
-```sh
-# Run from project root folder
-./scripts/build.sh -c -t $BUILD_TYPE -v $BUILD_NUMBER -o $BUILD_OUTPUT_DIR [optional build arguments]
-         
+To build the project you can either use our helper script or read the `build.sh` script and use your own terminal  commands to build the layer. Keep in mind Yocto builds can take time depending on your machine. It's best to use a local cache if you're going to be running multiple builds. We use the `-o` option to specify the output directory which in turn builds a local cache that can expediate your local builds. An example invokation is specified below. It is executed from the repositories root folder. NOT the `yocto` directory.
+```shell
+./scripts/build.sh -c -t Debug -o ~/yocto_build_dir         
 ```
 
-For example, the following arguments were used to build the IoT Hub Device Update from the ['develop'](https://github.com/Azure/iot-hub-device-update/tree/e099aaca0ad2b8849de24a13b1aa8e3ddf009251) branch at the commit#e099aac
-
-```sh
-# Run following commands from <projectroot> directory
-yocto_release=honister
-adu_release=honister
-adu_src_uri="gitsm://github.com/azure/iot-hub-device-update"
-# NOTE: Must specify the specific 'branch' and 'commit' for iot-hub-device-update here
-adu_git_branch=develop
-adu_git_commit=e099aaca0ad2b8849de24a13b1aa8e3ddf009251
-do_src_uri="gitsm://github.com/microsoft/do-client.git"
-do_git_branch=main
-do_git_commit=b61de2d347c8032562056b18f90ec710e531baf8
-adu_delta_src_uri="gitsm://github.com/azure/iot-hub-device-update-delta"
-adu_delta_git_branch=main
-adu_delta_git_commit=b581e92458f458969b427051a2ac5d18d3528dc6
-build_type=debug
-build_number=1.0.1
-build_output_dir=~/adu-yocto-build-output
-
-./scripts/build.sh -c -t $build_type -v $build_number --adu-src-uri $adu_src_uri --adu-git-branch $adu_git_branch --adu-git-commit $adu_git_commit --do-src-uri $do_src_uri --do-git-branch $do_git_branch  --do-git-commit $do_git_commit --adu-delta-src-uri $adu_delta_src_uri --adu-delta-git-branch $adu_delta_git_branch --adu-delta-git-commit $adu_delta_git_commit -o $build_output_dir
+You can use:
+```shell
+./scripts/build.sh -h
 ```
+to see the list of all options for the build. 
 
-If success, the output image file (adu-base-image-raspberrypi3.wic.gz) and example .swu update file (adu-update-image-raspberrypi3.swu) shold be located in `$build_output_dir/tmp/deploy/images/raspberrypi3` directory
+If successful, the output image file (adu-base-image-raspberrypi4-64.wic.gz) and example .swu update file (adu-update-image-raspberrypi4-64.swu) shold be located in `$build_output_dir/tmp/deploy/images/raspberrypi4-64` directory. If you built for version 0.0.0.1 you will need to copy the base file out and run the build again to produce a Sw Update update (file ending `.swu`) to be used for the update. You need to do this to make a usable base and update image. 
 
 ```sh
 .
-├── adu-base-image-raspberrypi3.wic.gz
-├── adu-update-image-raspberrypi3.swu
+├── adu-base-image-raspberrypi4-64.wic.gz
+├── adu-update-image-raspberrypi4-64.swu
 ```
 
 ## Build Pipelines Status
 
 | Board | Branch | Status |
 |---|---|---|
-| Raspberry Pi 3 | honister | [![Build Status](https://dev.azure.com/azure-device-update/adu-linux-client/_apis/build/status/azure.iot-hub-device-update-yocto?branchName=honister)](https://dev.azure.com/azure-device-update/adu-linux-client/_build/latest?definitionId=57&branchName=honister)|
+| Raspberry Pi 4 | kirkstone | [![Build Status](https://dev.azure.com/azure-device-update/adu-linux-client/_apis/build/status/azure.iot-hub-device-update-yocto?branchName=honister)](https://dev.azure.com/azure-device-update/adu-linux-client/_build/latest?definitionId=57&branchName=kirkstone)|
+
+
+## Using Your Own Board and Guidance for Production Images
+
+### Using Your Own Board
+
+If you've tried out Device Update on RaspberryPi 4 and decided you want to try and use it on other hardware you will need to port the `meta-raspberrypi-adu` layer to support your own board. You can find information on what changes may be required [here](https://github.com/Azure/meta-raspberrypi-adu/README.md). Keep in mind the `meta-raspberrypi-adu` layer is provided as is. It's a proof of concept. The repository contains information on how to port the existing proof of concept but you will likely need to add better u-boot scripts, include proper signing key information, and many other small things to get your board up to snuff. These are board dependent and are not under the purview of the Device Update team. If you have a question/comment please make a GitHub issue and we can take a look at it. 
+
+
+### Recommendations for Adapting for Production Images
+Like is said at the beginning of this document this repository is inteded to be a proof-of-concept. It is not intended to be a production ready drag and drop solution for building images to be used in the field. Within this repository We've made some recommendations for what might need to be changed but these recommendations should be taken as just that, recommendations. 
+
+
+## Question? Comment? Bug?
+
+Please create a GitHub issue and we'll get back to you as soon as we're able. Your feedback is integral to improving the agent, our software practices, and product direction. We're always happy to chat, but please RTFM (read the full manual) before posting. 
