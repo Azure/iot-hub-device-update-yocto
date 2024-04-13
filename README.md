@@ -33,7 +33,7 @@ The following variables are referenced in the below section setting up the build
 
 You can either just include the string wholesale in the terminal (eg for `$yocto_release` just use `'kirkstone'`) or set the variable at the beginning and then copy the command from this screen.
 
-You can set a bash variable like `yocto_release` this:
+You can set a bash variable like `yocto_release` like this:
 ```shell
 yocto_release=kirkstone
 ```
@@ -53,7 +53,7 @@ The first step for building the project is cloning this repository onto your dev
 ```shell
 git clone https://github.com/Azure/iot-hub-device-update-yocto -b <branchname> $proj_root
 ```
-2. Once you've cloned the project you next need to change into our "working directory" where the individual layers (in Yocto these layers build up to an image like a cake... or foundation.. or cake). 
+2. Once you've cloned the project you next need to change into our "working directory" where the individual layers (in Yocto these layers build up to an image like a cake or foundation). 
 ```shell
 cd $proj_root/iot-hub-device-update/yocto 
 ```
@@ -78,7 +78,7 @@ git clone --depth 1 --branch $yocto_release git://git.yoctoproject.org/poky
     git clone --depth 1 --branch $yocto_release git://git.yoctoproject.org/meta-raspberrypi
     ```
 
-5. Within the same directory we are now going to include the Device Update for IotHub layers which builds Device Update and provides those artifacts for the `meta-raspberrypi-adu` layer which integrates Device Update and modifies the image build instructions within `meta-raspberrypi` to output the `adu-base-image-<machine-name>.wic.gz` and `adu-update-image-<machine-name>.swu` which can be used to test out Device Update for IotHub. For more information on these layers and their outputs please read the `README.md` in each of the repos. 
+5. Within the same directory we are now going to include the Device Update for IotHub layers which builds Device Update agent and provides those artifacts for the `meta-raspberrypi-adu` layer. The `meta-raspberrypi-adu` layer then integrates the Device Update agent and modifies the image build instructions within `meta-raspberrypi` to output the `adu-base-image-<machine-name>.wic.gz` and `adu-update-image-<machine-name>.swu`. These are artifacts are what is used to test out Device Update for IotHub. For more information on these layers and their outputs please read the `README.md` in each of the repos. 
 
     1. From within the `yocto` directory checkout `meta-azure-device-update` at the version of Device Update you plan to use in your test. 
 
@@ -89,7 +89,7 @@ git clone --depth 1 --branch $yocto_release git://git.yoctoproject.org/poky
     ```shell
     git clone --branch $adu_release http://github.com/azure/meta-raspberrypi-adu
     ```
-    3. (optional) If you're planning on using delta updates you can checkout the `meta-iot-hub-device-update-delta` layer that integrates that functionality into that agent. Please read the `README.md` if you want to know more. 
+    3. (optional) If you're planning on using delta updates you can checkout the `meta-iot-hub-device-update-delta` layer that integrates that functionality into that agent. Please read the you can read more [here](https://learn.microsoft.com/azure/iot-hub-device-update/delta-updates) on learn.ms.com and [here](http://github.com/azure/meta-iot-hub-device-update-delta) within the meta-layer repository if you want to know more. 
     ```shell
     git clone --branch $adu_release http://github.com/azure/meta-iot-hub-device-update-delta
     ```
@@ -112,14 +112,14 @@ sudo ./scripts/install-deps.h
 
 ### Creating the Private Key for Sw Update Signing
 
-To create the `*.swu` file you will need to provide the build system with a private key and password file so that it can sign the generated image and then create the Sw Update file. This is REQUIRED for a Sw Update update to function. You MUST put the private key and password file inside of the `repo-root-directory/keys` directory. The build will break if you do not complete this step and your GitHub bug will elicit an exasperated sign from the developers of Device Update. Be warned. 
+To create the `*.swu` file you will need to provide the build system with a private key and password file so that it can sign the generated image and then create the Sw Update file. This is REQUIRED for a Sw Update update to function. You MUST put the private key and password file inside of the `repo-root-directory/keys` directory. The build will break if you do not complete this step. 
 
 You can find the instructions for generating the private key and creating the password file [here](./keys/README.md). 
 
 
 ### Build The Project
 
-To build the project you can either use our helper script or read the `build.sh` script and use your own terminal  commands to build the layer. Keep in mind Yocto builds can take time depending on your machine. It's best to use a local cache if you're going to be running multiple builds. We use the `-o` option to specify the output directory which in turn builds a local cache that can expediate your local builds. An example invokation is specified below. It is executed from the repositories root folder. NOT the `yocto` directory.
+To build the project you can either use our helper script or read the `build.sh` script and use your own terminal  commands to build the layer. Keep in mind Yocto builds can take time depending on your machine. It's best to use a local cache if you're going to be running multiple builds. We use the `-o` option to specify the output directory which in turn builds a local cache that can expedite your local builds. An example invocation is specified below. It is executed from the repositories root folder. NOT the `yocto` directory.
 ```shell
 ./scripts/build.sh -c -t Debug -o ~/yocto_build_dir         
 ```
@@ -130,7 +130,7 @@ You can use:
 ```
 to see the list of all options for the build. 
 
-If successful, the output image file (adu-base-image-raspberrypi4-64.wic.gz) and example .swu update file (adu-update-image-raspberrypi4-64.swu) shold be located in `$build_output_dir/tmp/deploy/images/raspberrypi4-64` directory. If you built for version 0.0.0.1 you will need to copy the base file out and run the build again to produce a Sw Update update (file ending `.swu`) to be used for the update. You need to do this to make a usable base and update image. 
+If successful, the output image file (adu-base-image-raspberrypi4-64.wic.gz) and example .swu update file (adu-update-image-raspberrypi4-64.swu) should be located in `$build_output_dir/tmp/deploy/images/raspberrypi4-64` directory. If you built for version 0.0.0.1 you will need to copy the base file out and run the build again to produce a Sw Update update (file ending `.swu`) to be used for the update. You need to do this to make a usable base and update image. 
 
 ```sh
 .
@@ -153,9 +153,9 @@ If you've tried out Device Update on RaspberryPi 4 and decided you want to try a
 
 
 ### Recommendations for Adapting for Production Images
-Like is said at the beginning of this document this repository is inteded to be a proof-of-concept. It is not intended to be a production ready drag and drop solution for building images to be used in the field. Within this repository We've made some recommendations for what might need to be changed but these recommendations should be taken as just that, recommendations. 
+Like is said at the beginning of this document this repository is intended to be a proof-of-concept. It is not intended to be a production ready drag and drop solution for building images to be used in the field. Within this repository We've made some recommendations for what might need to be changed but these recommendations should be taken as just that, recommendations. 
 
 
 ## Question? Comment? Bug?
 
-Please create a GitHub issue and we'll get back to you as soon as we're able. Your feedback is integral to improving the agent, our software practices, and product direction. We're always happy to chat, but please RTFM (read the full manual) before posting. 
+Please create a GitHub issue and we'll get back to you as soon as we're able. Your feedback is integral to improving the agent, our software practices, and product direction. We're always happy to chat.
