@@ -15,3 +15,11 @@ openssl genrsa -out ./priv.pem -passout file:./priv.pass
 ```
 
 Congratulations you've now created a password file and used it to create a private key that is now stored in `priv.pem`. The build system can now use it to sign the swupdate payload. 
+
+The public key that is installed into the image during compilation is generated at BUILD time using: 
+
+```shell
+openssl rsa -in ${ADUC_PRIVATE_KEY} -passin file:${ADUC_PRIVATE_KEY_PASSWORD} -out public.pem -outform PEM -pubout
+```
+
+If the version of OpenSSL on your build machine (meaning the one where you generated the private key) does not match the one on your TARGET machine (meaning the architecture/distro that you are building DeviceUpdate for) you will need to provide a public key statically AND change the `adu-pub-key` directory to include it. You can find more information [here](https://github.com/Azure/meta-azure-device-update/recipes-azure-device-update/adu-pub-key/README.md). 
