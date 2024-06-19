@@ -15,84 +15,68 @@
 #                      or 'deliveryoptimization-agent' for 1.0.0 or later.
 # 
 parameters:
-- name: build_env
-  displayName: Build environment
-  type: string
-  default: azure-iot-hub-device-update-develop
-  values:
-  - azure-iot-hub-device-update-develop
-  - azure-iot-hub-device-update-1-0-0
+
 - name: yocto_release
   displayName: Yocto release 'version'
   type: string
-  default: honister
+  default: kirkstone
   values:
-  - honister
-  - warrior
-- name: meta_layer_branch
-  displayName: Meta layers 'branch'
-  type: string
-  default: honister
-  values:
-  - honister
+  - kirkstone
+
 - name: adu_src_uri
   displayName: ADU URI
   type: string
-  default: "gitsm://github.com/azure/iot-hub-device-update"
+  default: "git://github.com/Azure/iot-hub-device-update" 
+
 - name: adu_git_branch
   displayName: ADU Git branch Name
   type: string
   default: develop
   values:
-    - main
     - develop
+
 - name: adu_git_commit
   displayName: ADU Git commit 
   type: string
-  default: e099aaca0ad2b8849de24a13b1aa8e3ddf009251
+  default: 60bb98ae3631419b393c528f7dc3cf0797b231e6
+
 - name: do_src_uri
   displayName: Delivery Optimization URI
   type: string
-  default: "gitsm://github.com/microsoft/do-client.git"
+  default: "git://github.com/microsoft/do-client.git"
+
 - name: do_git_branch
   displayName: Delivery Optimization Git branch name
   type: string
-  default: main
+  default: develop
   values:
-    - main
     - develop
+
 - name: do_git_commit
   displayName: Delivery Optimization Git commit 
   type: string
-  default: b61de2d347c8032562056b18f90ec710e531baf8
+  default: 8362e36bb990914bb3f69a08f50f383612983002
+
 - name: adu_delta_src_uri
   displayName: Device Update Delta Diff URI
   type: string
-  default: gitsm://github.com/azure/iot-hub-device-update-delta
+  default: "git://github.com/azure/iot-hub-device-update-delta"
+
 - name: adu_delta_git_branch
   displayName: Device Update Delta Diff Branch
   type: string
   default: main
   values:
     - main
-    - develop
+
 - name: adu_delta_git_commit
   displayName: Device Update Delta Diff Git commit 
   type: string
-  default: b581e92458f458969b427051a2ac5d18d3528dc6
+  default: 77a120d03a8033126b22edd1667820e59bcf3f81
 
-# Below, we're selecting variable group based on build_env parameter above.
-# 
-# The variable groups are defined in Pipelines/Library.
-# To create new group, follow the group naming convention below:
-#            'yocto-reference-image-' + parameters.build_env 
-#
 variables:
-  - group: yocto-reference-image-${{ parameters.build_env }}
   - name: yocto_release
     value: ${{ parameters.yocto_release }}
-  - name: meta_layer_branch
-    value: ${{ parameters.meta_layer_branch }}
   - name: adu_src_uri
     value: ${{ parameters.adu_src_uri }}
   - name: adu_git_branch
@@ -111,25 +95,13 @@ variables:
     value: ${{ parameters.adu_delta_git_branch }}
   - name: adu_delta_git_commit
     value: ${{ parameters.adu_delta_git_commit }}
-  - name: build_env
-    value: ${{ parameters.build_env }}
   - name: majorVersion
     value: 1
   - name: minorVersion
-    value: 0
+    value: 2
 
 # Set build name
 name: ${{ variables.majorVersion }}.${{ variables.minorVersion }}.$(BuildID).$(rev:r)
 
-#
-# Note: some build environment may requires hard-coded commit hash# (ADO Pipeline limitation) for some github repository.
-# This can be achieved by specified the hard-coded commit hash# in 'version' parameter.
-# See resources-template-azure-adu-private-preview-dev-active.yml for example.
-#
-# This require a corresponding resources-template file with name matching selected build_env parameter.
-#
-# To allow running pipeline manually with any desired commit hash#, the custom resources template can be select.
-# Then select specific commit using the Resources UI.
-#
 extends:
-  template: resources-template-${{ variables.build_env }}.yml
+  template: iot-hub-device-update-build.yml
