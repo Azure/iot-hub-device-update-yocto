@@ -140,7 +140,7 @@ while [[ $1 != "" ]]; do
 done
 
 export MACHINE=raspberrypi4-64
-export TEMPLATECONF=$ROOT_DIR/yocto/config-templates/$MACHINE
+# export TEMPLATECONF=$ROOT_DIR/yocto/config-templates/$MACHINE
 
 if [ -n "${ADU_SRC_URI}" ]; then
     export ADU_SRC_URI
@@ -186,13 +186,6 @@ ADUC_KEY_DIR=$(realpath $SCRIPT_DIR/../keys)
 export ADUC_PRIVATE_KEY=$ADUC_KEY_DIR/priv.pem
 export ADUC_PRIVATE_KEY_PASSWORD=$ADUC_KEY_DIR/priv.pass
 
-# Remove the conf dir before sourcing oe-init-build-env
-if [[ $CLEAN == "true" ]]; then
-    rm -rf $BUILD_DIR/conf
-    # cp $ROOT_DIR/yocto/config-templates/raspberrypi4-64/local.conf $BUILD_DIR/conf
-    # cp $ROOT_DIR/yocto/config-templates/bblayers.conf $BUILD_DIR/conf
-fi
-
 # Remove all build output files for a full rebuild.
 if [[ $REBUILD == "true" ]]; then
     rm -rf $BUILD_DIR/*
@@ -214,7 +207,7 @@ elif [[ $BUILD_ADU_DELTA_ONLY == 1 ]]; then
     bitbake -c clean -C compile -f azure-device-update-diffs
 else
     if [[ $CLEAN == "true" ]]; then
-        bitbake -c clean -f \
+        bitbake -c cleanall  -f \
             azure-device-update \
             adu-agent-service \
             azure-iot-sdk-c \
@@ -224,7 +217,7 @@ else
             core-image-full-cmdline \
             core-image-minimal
 
-        bitbake -c clean -f \
+        bitbake -c cleanall  -f \
             adu-base-image \
             adu-update-image
     fi
