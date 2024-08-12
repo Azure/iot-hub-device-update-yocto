@@ -1,83 +1,126 @@
-jobs:
-  - job: build_yocto
-    displayName: Build Yocto images
-    pool:
-      name: 1es_hosted_pool_yocto  
-    timeoutInMinutes: 960
-    steps:
-      - bash: git clone --depth 1 --branch $(yocto_release) git://git.yoctoproject.org/poky
-        displayName: "Clone poky"
-        workingDirectory: "$(Build.SourcesDirectory)/yocto"
+parameters:
+- name: yocto_release
+  displayName: "Yocto Release version"
+  type: string
+  default: scarthgap
+  values:
+    - scarthgap
+    - kirkstone
+- name: adu_src_uri
+  displayName: "ADU Source URI"
+  type: string
+  default: "git://github.com/Azure/iot-hub-device-update"
+- name: adu_git_branch
+  displayName: "ADU Git Branch"
+  type: string
+  default: "develop"
+- name: adu_git_commit
+  displayName: "ADU Git Commit"
+  type: string
+  default: "AUTOREV"
+- name: do_src_uri
+  displayName: "DO Source URI"
+  type: string
+  default: "git://github.com/microsoft/do-client"
+- name: do_git_branch
+  displayName: "DO Git Branch"
+  type: string
+  default: "develop"
+- name: do_git_commit
+  displayName: "DO Git Commit"
+  type: string
+  default: "AUTOREV"
+- name: adu_delta_src_uri
+  displayName: "ADU Delta Source URI"
+  type: string
+  default: "git://github.com/azure/io-thub-device-update-delta"
+- name: adu_delta_git_branch
+  displayName: "ADU Delta Git Branch"
+  type: string
+  default: "main"
+- name: adu_delta_git_commit
+  displayName: "ADU Delta Git Commit"
+  type: string
+  default: "AUTOREV"
+- name: build_workspace_dir
+  displayName: "Directory for the build workspace"
+  type: string
+  default: "$(Pipeline.Workspace)/build/"
 
-      - bash: git clone --depth 1 --branch $(yocto_release)  https://github.com/sbabic/meta-swupdate
-        displayName: "Clone meta-swupdate"
-        workingDirectory: "$(Build.SourcesDirectory)/yocto"
+steps: 
+  - bash: | 
+      if [[ ! -d $(build_workspace_dir) ]]; then
+        mkdir -p $(build_workspace_dir)
+      fi
+    displayName: "Ensuring build directory exists"
 
-      - bash: git clone --depth 1 --branch $(yocto_release)  git://git.openembedded.org/meta-openembedded
-        displayName: "Clone meta-openembedded"
-        workingDirectory: "$(Build.SourcesDirectory)/yocto"
+  - bash: git clone --depth 1 --branch $(yocto_release) git://git.yoctoproject.org/poky
+    displayName: "Clone poky"
+    workingDirectory: "$(Build.SourcesDirectory)/yocto"
 
-      - bash: git clone --depth 1 --branch $(yocto_release)  git://git.yoctoproject.org/meta-raspberrypi
-        displayName: "Clone meta-raspberrypi"
-        workingDirectory: "$(Build.SourcesDirectory)/yocto"
+  - bash: git clone --depth 1 --branch $(yocto_release)  https://github.com/sbabic/meta-swupdate
+    displayName: "Clone meta-swupdate"
+    workingDirectory: "$(Build.SourcesDirectory)/yocto"
 
-      - bash: git clone --depth 1 --branch $(yocto_release)  https://github.com/azure/meta-azure-device-update
-        displayName: "Clone meta-azure-device-update"
-        workingDirectory: "$(Build.SourcesDirectory)/yocto"
+  - bash: git clone --depth 1 --branch $(yocto_release)  git://git.openembedded.org/meta-openembedded
+    displayName: "Clone meta-openembedded"
+    workingDirectory: "$(Build.SourcesDirectory)/yocto"
 
-      - bash: git clone --depth 1 --branch $(yocto_release)  https://github.com/azure/meta-iot-hub-device-update-delta
-        displayName: "Clone meta-iot-hub-device-update-delta"
-        workingDirectory: "$(Build.SourcesDirectory)/yocto"
+  - bash: git clone --depth 1 --branch $(yocto_release)  git://git.yoctoproject.org/meta-raspberrypi
+    displayName: "Clone meta-raspberrypi"
+    workingDirectory: "$(Build.SourcesDirectory)/yocto"
 
-      - bash: git clone --depth 1 --branch $(yocto_release)  https://github.com/azure/meta-raspberrypi-adu
-        displayName: "Clone meta-raspberrypi-adu"
-        workingDirectory: "$(Build.SourcesDirectory)/yocto"
+  - bash: git clone --depth 1 --branch $(yocto_release)  https://github.com/azure/meta-azure-device-update
+    displayName: "Clone meta-azure-device-update"
+    workingDirectory: "$(Build.SourcesDirectory)/yocto"
 
-      - bash: |
-          sudo apt-get update
-        displayName: Update apt package repositories
-        workingDirectory: "$(Build.SourcesDirectory)"
-        failOnStderr: true
-      - bash: |
-          echo 'debconf debconf/frontend select Noninteractive' | sudo debconf-set-selections
-          ./scripts/install-deps.sh
-        displayName: Install dependencies for Yocto Build
-        workingDirectory: "$(Build.SourcesDirectory)"
-        failOnStderr: true
-        
-      - task: Bash@3
-        displayName: "Run Yocto build"
-        inputs:
-          targetType: "filePath"
-          filePath: "./scripts/build.sh"
-          arguments: '-c -t MinSizeRel -v $(Build.BuildNumber) --adu-src-uri $(adu_src_uri) --adu-git-branch $(adu_git_branch) --adu-git-commit $(adu_git_commit) --do-src-uri $(do_src_uri) --do-git-branch $(do_git_branch)  --do-git-commit $(do_git_commit) --adu-delta-src-uri $(adu_delta_src_uri) --adu-delta-git-branch $(adu_delta_git_branch) --adu-delta-git-commit $(adu_delta_git_commit) -o $(Build.BinariesDirectory) $(build_args)'
-          workingDirectory: $(Build.SourcesDirectory)
+  - bash: git clone --depth 1 --branch $(yocto_release)  https://github.com/azure/meta-iot-hub-device-update-delta
+    displayName: "Clone meta-iot-hub-device-update-delta"
+    workingDirectory: "$(Build.SourcesDirectory)/yocto"
 
-      # Copy built artifacts to a staging directory for publishing.
-      - bash: |
-          rm -rf $(Build.ArtifactStagingDirectory)/*
-          mkdir -p $(Build.ArtifactStagingDirectory)/images/raspberrypi4
-          cp $(Build.BinariesDirectory)/build/tmp/deploy/images/raspberrypi4/adu-base-image-raspberrypi4.wic.gz \
-            $(Build.ArtifactStagingDirectory)/images/raspberrypi4/adu-base-image-raspberrypi4-$(Build.BuildNumber).wic.gz
-          cp $(Build.BinariesDirectory)/build//tmp/deploy/images/raspberrypi4/adu-base-image-raspberrypi4.wic.bmap \
-            $(Build.ArtifactStagingDirectory)/images/raspberrypi4/adu-base-image-raspberrypi4-$(Build.BuildNumber).wic.bmap
-          cp $(Build.BinariesDirectory)/build/tmp/deploy/images/raspberrypi4/adu-update-image-raspberrypi4.swu \
-            $(Build.ArtifactStagingDirectory)/images/raspberrypi4/adu-update-image-raspberrypi4-$(Build.BuildNumber).swu
-          mkdir -p $(Build.ArtifactStagingDirectory)/bin/raspberrypi4
-          cp $(Build.BinariesDirectory)/build/tmp/work/raspberrypi4-poky-linux-gnueabi/adu-base-image/1.0-r0/rootfs/usr/bin/AducIotAgent $(Build.ArtifactStagingDirectory)/bin/raspberrypi4
-          cp $(Build.BinariesDirectory)/build/tmp/work/raspberrypi4-poky-linux-gnueabi/adu-base-image/1.0-r0/rootfs/usr/bin/$(doAgentBinaryName) $(Build.ArtifactStagingDirectory)/bin/raspberrypi4
-        workingDirectory: $(Build.ArtifactStagingDirectory)
-        displayName: "Stage build artifacts"
-        failOnStderr: true
+  - bash: git clone --depth 1 --branch $(yocto_release)  https://github.com/azure/meta-raspberrypi-adu
+    displayName: "Clone meta-raspberrypi-adu"
+    workingDirectory: "$(Build.SourcesDirectory)/yocto"
 
-      - task: PublishBuildArtifacts@1
-        displayName: "Publish images"
-        inputs:
-          ArtifactName: images
-          PathtoPublish: "$(Build.ArtifactStagingDirectory)/images"
+  - bash: |
+      sudo apt-get update
+    displayName: Update apt package repositories
+    workingDirectory: "$(Build.SourcesDirectory)"
+    failOnStderr: true
+  - bash: |
+      echo 'debconf debconf/frontend select Noninteractive' | sudo debconf-set-selections
+      ./scripts/install-deps.sh
+    displayName: Install dependencies for Yocto Build
+    workingDirectory: "$(Build.SourcesDirectory)"
+    failOnStderr: true
+    
+  - task: Bash@3
+    displayName: "Run Yocto build"
+    inputs:
+      targetType: "filePath"
+      filePath: "./scripts/build.sh"
+      arguments: '-c -t MinSizeRel -v $(Build.BuildNumber) --adu-src-uri $(adu_src_uri) --adu-git-branch $(adu_git_branch) --adu-git-commit $(adu_git_commit) --do-src-uri $(do_src_uri) --do-git-branch $(do_git_branch)  --do-git-commit $(do_git_commit) --adu-delta-src-uri $(adu_delta_src_uri) --adu-delta-git-branch $(adu_delta_git_branch) --adu-delta-git-commit $(adu_delta_git_commit) -o $(build_workspace_dir)'
+      workingDirectory: $(Build.SourcesDirectory)
 
-      - task: PublishBuildArtifacts@1
-        displayName: "Publish binaries"
-        inputs:
-          ArtifactName: binaries
-          PathtoPublish: "$(Build.ArtifactStagingDirectory)/bin"
+  # Copy artifacts to a staging directory for publishing.
+  # there's something you can do here to get the outputs to take care of it
+  - bash: |
+      cp $(Build.BinariesDirectory)/build/tmp/deploy/images/raspberrypi4/adu-base-image-raspberrypi4.wic.gz \
+        $(Build.ArtifactStagingDirectory)/adu-base-image-raspberrypi4-$(Build.BuildNumber).wic.gz
+      cp $(Build.BinariesDirectory)/build/tmp/deploy/images/raspberrypi4/adu-update-image-raspberrypi4.swu \
+        $(Build.ArtifactStagingDirectory)/adu-update-image-raspberrypi4-$(Build.BuildNumber).swu
+    workingDirectory: $(Build.ArtifactStagingDirectory)
+    displayName: "Stage build artifacts"
+    failOnStderr: true
+
+  - task: PublishBuildArtifacts@1
+    displayName: "Publish images"
+    inputs:
+      ArtifactName: images
+      PathtoPublish: "$(Build.ArtifactStagingDirectory)/images"
+
+  - task: PublishBuildArtifacts@1
+    displayName: "Publish binaries"
+    inputs:
+      ArtifactName: binaries
+      PathtoPublish: "$(Build.ArtifactStagingDirectory)/bin"
