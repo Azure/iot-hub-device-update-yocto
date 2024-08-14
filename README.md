@@ -55,7 +55,7 @@ git clone https://github.com/Azure/iot-hub-device-update-yocto -b <branchname> $
 ```
 2. Once you've cloned the project you next need to change into our "working directory" where the individual layers (in Yocto these layers build up to an image like a cake or foundation). 
 ```shell
-cd $proj_root/iot-hub-device-update/yocto 
+cd $proj_root/iot-hub-device-update-yocto/yocto 
 ```
 3. Once you're in the `yocto` directory we need to check out the Yocto Build "engine" or base layer so we can build with it. 
 ```shell
