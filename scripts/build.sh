@@ -218,12 +218,12 @@ else
             deliveryoptimization-agent-service \
             swupdate \
             core-image-full-cmdline \
-            core-image-minimal
+            core-image-minimal 
 
         bitbake -c cleanall  -f \
             adu-base-image \
             adu-update-image
     fi
 
-    bitbake core-image-minimal
+    bitbake adu-update-image
 fi
