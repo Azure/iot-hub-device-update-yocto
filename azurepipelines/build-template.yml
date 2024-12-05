@@ -49,36 +49,36 @@ parameters:
 
 steps: 
   - bash: | 
-      if [[ ! -d $(build_workspace_dir) ]]; then
-        mkdir -p $(build_workspace_dir)
+      if [[ ! -d ${{ parameters.build_workspace_dir }} ]]; then
+        mkdir -p ${{ parameters.build_workspace_dir }}
       fi
     displayName: "Ensuring build directory exists"
 
-  - bash: git clone --depth 1 --branch $(yocto_release) git://git.yoctoproject.org/poky
+  - bash: git clone --depth 1 --branch ${{ parameters.yocto_release }} git://git.yoctoproject.org/poky
     displayName: "Clone poky"
     workingDirectory: "$(Build.SourcesDirectory)/yocto"
 
-  - bash: git clone --depth 1 --branch $(yocto_release)  https://github.com/sbabic/meta-swupdate
+  - bash: git clone --depth 1 --branch ${{ parameters.yocto_release }}  https://github.com/sbabic/meta-swupdate
     displayName: "Clone meta-swupdate"
     workingDirectory: "$(Build.SourcesDirectory)/yocto"
 
-  - bash: git clone --depth 1 --branch $(yocto_release)  git://git.openembedded.org/meta-openembedded
+  - bash: git clone --depth 1 --branch ${{ parameters.yocto_release }}  git://git.openembedded.org/meta-openembedded
     displayName: "Clone meta-openembedded"
     workingDirectory: "$(Build.SourcesDirectory)/yocto"
 
-  - bash: git clone --depth 1 --branch $(yocto_release)  git://git.yoctoproject.org/meta-raspberrypi
+  - bash: git clone --depth 1 --branch ${{ parameters.yocto_release }}  git://git.yoctoproject.org/meta-raspberrypi
     displayName: "Clone meta-raspberrypi"
     workingDirectory: "$(Build.SourcesDirectory)/yocto"
 
-  - bash: git clone --depth 1 --branch $(yocto_release)  https://github.com/azure/meta-azure-device-update
+  - bash: git clone --depth 1 --branch ${{ parameters.yocto_release }}  https://github.com/azure/meta-azure-device-update
     displayName: "Clone meta-azure-device-update"
     workingDirectory: "$(Build.SourcesDirectory)/yocto"
 
-  - bash: git clone --depth 1 --branch $(yocto_release)  https://github.com/azure/meta-iot-hub-device-update-delta
+  - bash: git clone --depth 1 --branch ${{ parameters.yocto_release }}  https://github.com/azure/meta-iot-hub-device-update-delta
     displayName: "Clone meta-iot-hub-device-update-delta"
     workingDirectory: "$(Build.SourcesDirectory)/yocto"
 
-  - bash: git clone --depth 1 --branch $(yocto_release)  https://github.com/azure/meta-raspberrypi-adu
+  - bash: git clone --depth 1 --branch ${{ parameters.yocto_release }}  https://github.com/azure/meta-raspberrypi-adu
     displayName: "Clone meta-raspberrypi-adu"
     workingDirectory: "$(Build.SourcesDirectory)/yocto"
 
@@ -99,7 +99,7 @@ steps:
     inputs:
       targetType: "filePath"
       filePath: "./scripts/build.sh"
-      arguments: '-c -t MinSizeRel -v $(Build.BuildNumber) --adu-src-uri $(adu_src_uri) --adu-git-branch $(adu_git_branch) --adu-git-commit $(adu_git_commit) --do-src-uri $(do_src_uri) --do-git-branch $(do_git_branch)  --do-git-commit $(do_git_commit) --adu-delta-src-uri $(adu_delta_src_uri) --adu-delta-git-branch $(adu_delta_git_branch) --adu-delta-git-commit $(adu_delta_git_commit) -o $(build_workspace_dir)'
+      arguments: '-c -t MinSizeRel -v $(Build.BuildNumber) --adu-src-uri ${{ parameters.adu_src_uri }} --adu-git-branch ${{ parameters.adu_git_branch }} --adu-git-commit ${{ parameters.adu_git_commit }} --do-src-uri ${{ parameters.do_src_uri }} --do-git-branch ${{ parameters.do_git_branch }}  --do-git-commit ${{ parameters.do_git_commit }} --adu-delta-src-uri ${{ parameters.adu_delta_src_uri }} --adu-delta-git-branch ${{ parameters.adu_delta_git_branch }} --adu-delta-git-commit ${{ parameters.adu_delta_git_commit }} -o ${{ parameters.build_build_workspace_dir }}'
       workingDirectory: $(Build.SourcesDirectory)
 
   # Copy artifacts to a staging directory for publishing.
