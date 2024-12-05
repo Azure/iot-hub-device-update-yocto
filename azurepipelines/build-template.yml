@@ -83,11 +83,6 @@ steps:
     workingDirectory: "$(Build.SourcesDirectory)/yocto"
 
   - bash: |
-      sudo apt-get update
-    displayName: Update apt package repositories
-    workingDirectory: "$(Build.SourcesDirectory)"
-    failOnStderr: true
-  - bash: |
       echo 'debconf debconf/frontend select Noninteractive' | sudo debconf-set-selections
       ./scripts/install-deps.sh
     displayName: Install dependencies for Yocto Build
