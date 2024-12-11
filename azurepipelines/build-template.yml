@@ -81,7 +81,13 @@ steps:
   - bash: git clone --depth 1 --branch ${{ parameters.yocto_release }}  https://github.com/azure/meta-raspberrypi-adu
     displayName: "Clone meta-raspberrypi-adu"
     workingDirectory: "$(Build.SourcesDirectory)/yocto"
-
+  
+  - bash: |
+      sudo ./scripts/remove_src_duplicates.sh
+    displayName: Remove duplicate entries in the azure-cli repo list
+    workingDirectory: "$(Build.SourcesDirectory)"
+    failOnStderr: true
+  
   - bash: |
       echo 'debconf debconf/frontend select Noninteractive' | sudo debconf-set-selections
       ./scripts/install-deps.sh
