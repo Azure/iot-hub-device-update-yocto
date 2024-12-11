@@ -83,6 +83,12 @@ steps:
     workingDirectory: "$(Build.SourcesDirectory)/yocto"
   
   - bash: |
+      chmod +x ./scripts/remove_src_duplicates.sh
+    displayName: Make script executable
+    workingDirectory: "$(Build.SourcesDirectory)"
+    failOnStderr: true
+  
+  - bash: |
       sudo ./scripts/remove_src_duplicates.sh
     displayName: Remove duplicate entries in the azure-cli repo list
     workingDirectory: "$(Build.SourcesDirectory)"
