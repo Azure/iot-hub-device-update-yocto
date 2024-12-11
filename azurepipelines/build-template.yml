@@ -87,7 +87,13 @@ steps:
     displayName: Make script executable
     workingDirectory: "$(Build.SourcesDirectory)"
     failOnStderr: true
-  
+    
+  - bash: |
+      rm -f /etc/apt/sources.list.d/azure-cli.sources
+    displayName: Make script executable
+    workingDirectory: "$(Build.SourcesDirectory)"
+    failOnStderr: true
+
   - bash: |
       sudo ./scripts/remove_src_duplicates.sh
     displayName: Remove duplicate entries in the azure-cli repo list

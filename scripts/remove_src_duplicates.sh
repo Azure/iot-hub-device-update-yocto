@@ -23,6 +23,7 @@ remove_duplicates() {
 # Iterate over the files and remove duplicates
 for file in "${files[@]}"; do
     remove_duplicates "$file"
+    echo "removing duplicates from $file"
 done
 
 # Update the package list
