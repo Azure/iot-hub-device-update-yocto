@@ -38,7 +38,7 @@ parameters:
 - name: adu_git_commit
   displayName: ADU Git commit 
   type: string
-  default: 60bb98ae3631419b393c528f7dc3cf0797b231e6
+  default: "${AUTOREV}"
 
 - name: do_src_uri
   displayName: Delivery Optimization URI
@@ -55,7 +55,7 @@ parameters:
 - name: do_git_commit
   displayName: Delivery Optimization Git commit 
   type: string
-  default: 8362e36bb990914bb3f69a08f50f383612983002
+  default: "${AUTOREV}"
 
 - name: adu_delta_src_uri
   displayName: Device Update Delta Diff URI
@@ -72,7 +72,7 @@ parameters:
 - name: adu_delta_git_commit
   displayName: Device Update Delta Diff Git commit 
   type: string
-  default: 77a120d03a8033126b22edd1667820e59bcf3f81
+  default: "${AUTOREV}"
 
 variables:
   - name: yocto_release
