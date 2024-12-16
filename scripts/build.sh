@@ -38,11 +38,11 @@ ADU_GIT_COMMIT=33554d29476eab2447234528c8aed186e2b6423d
 ADU_SRC_URI=gitsm://github.com/Azure/iot-hub-device-update
 
 DO_GIT_BRANCH=main
-DO_GIT_COMMIT=b61de2d347c8032562056b18f90ec710e531baf8
+DO_GIT_COMMIT=6141e09e4918b9e32db0c5ee4df40f3406bcfd92
 DO_SRC_URI=gitsm://github.com/microsoft/do-client
 
 ADU_DELTA_GIT_BRANCH=main
-ADU_DELTA_GIT_COMMIT=57efe4360f52b297ae54323271c530239fb1d1c7
+ADU_DELTA_GIT_COMMIT=d03a3bbbe3ad618d561e62519a515ee81a1e03b0
 ADU_DELTA_SRC_URI=gitsm://github.com/Azure/iot-hub-device-update-delta
 
 BUILD_DIR=$ROOT_DIR/build
