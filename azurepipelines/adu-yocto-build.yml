@@ -74,6 +74,11 @@ parameters:
   type: string
   default: "${AUTOREV}"
 
+- name: build_workspace_dir
+  displayName: "Directory for the build workspace"
+  type: string
+  default: "$(Pipeline.Workspace)/build/"
+
 variables:
   - name: yocto_release
     value: ${{ parameters.yocto_release }}
