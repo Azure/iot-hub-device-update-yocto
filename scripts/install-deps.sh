@@ -11,6 +11,7 @@ diffstat \
 unzip \
 texinfo \
 gcc \
+git-lfs \
 build-essential \
 chrpath \
 socat \
@@ -38,3 +39,5 @@ tmux \
 bmap-tools \
 autoconf \
 autopoint
+
+sudo git-lfs install
