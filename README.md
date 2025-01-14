@@ -107,7 +107,7 @@ Please look into `scripts/install-deps.sh` to determine what you may need to int
 
 1. From the `project_root` please execute the following command in your terminal
 ```shell
-sudo ./scripts/install-deps.h
+sudo ./scripts/install-deps.sh
 ```
 
 ### Creating the Private Key for Sw Update Signing
