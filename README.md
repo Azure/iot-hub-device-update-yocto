@@ -34,15 +34,18 @@ The following variables are referenced in the below section setting up the build
 You can either just include the string wholesale in the terminal (eg for `$yocto_release` just use `'kirkstone'`) or set the variable at the beginning and then copy the command from this screen.
 
 You can set a bash variable like `yocto_release` like this:
-```shell
+
+```sh
 yocto_release=kirkstone
 ```
 and for `adu_release` like this: 
-```shell
+
+```sh
 adu_release=main
 ```
 and for `project_root` like this:
-```shell
+
+```sh
 project_root=~/
 ```
 
@@ -50,31 +53,39 @@ The first step for building the project is cloning this repository onto your dev
 
 1. Clone this repository onto your device:
     
-```shell
-git clone https://github.com/Azure/iot-hub-device-update-yocto -b <branchname> $proj_root
+```sh
+git clone https://github.com/Azure/iot-hub-device-update-yocto -b <branchname> $project_root/iot-hub-device-update-yocto
 ```
+
 2. Once you've cloned the project you next need to change into our "working directory" where the individual layers (in Yocto these layers build up to an image like a cake or foundation). 
-```shell
-cd $proj_root/iot-hub-device-update/yocto 
+
+```sh
+cd $project_root/iot-hub-device-update/yocto 
 ```
+
 3. Once you're in the `yocto` directory we need to check out the Yocto Build "engine" or base layer so we can build with it. 
-```shell
+
+```sh
 git clone --depth 1 --branch $yocto_release git://git.yoctoproject.org/poky
 ```
+
 4. Next we need to checkout the rest of the dependency layers into the `yocto` directory
 
     1. Clone the SwUpdate meta layer 
-    ```shell
+
+    ```sh
     git clone --depth 1 --branch $yocto_release  https://github.com/sbabic/meta-swupdate
     ```
 
     2. Clone the Open Embedded meta layer. This layer include many modules (or layers) needed for building a Linux-base system.
-    ```shell
+
+    ```sh
     git clone --depth 1 --branch $yocto_release  git://git.openembedded.org/meta-openembedded
     ```
 
     3. Clone the Raspberry Pi meta layer. Since, the reference image that we are building is for a Raspberry Pi 4 hardware.
-    ```shell
+
+    ```sh
     git clone --depth 1 --branch $yocto_release git://git.yoctoproject.org/meta-raspberrypi
     ```
 
@@ -82,15 +93,19 @@ git clone --depth 1 --branch $yocto_release git://git.yoctoproject.org/poky
 
     1. From within the `yocto` directory checkout `meta-azure-device-update` at the version of Device Update you plan to use in your test. 
 
-    ```shell
+    ```sh
     git clone --branch $adu_release http://github.com/azure/meta-azure-device-update
     ```
+
     2. From within the `yocto` directory checkout `meta-raspberrypi-adu` at the version of Device Update you plan to use in your test. 
-    ```shell
+
+    ```sh
     git clone --branch $adu_release http://github.com/azure/meta-raspberrypi-adu
     ```
+
     3. (optional) If you're planning on using delta updates you can checkout the `meta-iot-hub-device-update-delta` layer that integrates that functionality into that agent. Please read the you can read more [here](https://learn.microsoft.com/azure/iot-hub-device-update/delta-updates) on learn.ms.com and [here](http://github.com/azure/meta-iot-hub-device-update-delta) within the meta-layer repository if you want to know more. 
-    ```shell
+
+    ```sh
     git clone --branch $adu_release http://github.com/azure/meta-iot-hub-device-update-delta
     ```
 
@@ -106,7 +121,8 @@ Please look into `scripts/install-deps.sh` to determine what you may need to int
 
 
 1. From the `project_root` please execute the following command in your terminal
-```shell
+
+```sh
 sudo ./scripts/install-deps.h
 ```
 
@@ -120,12 +136,14 @@ You can find the instructions for generating the private key and creating the pa
 ### Build The Project
 
 To build the project you can either use our helper script or read the `build.sh` script and use your own terminal  commands to build the layer. Keep in mind Yocto builds can take time depending on your machine. It's best to use a local cache if you're going to be running multiple builds. We use the `-o` option to specify the output directory which in turn builds a local cache that can expedite your local builds. An example invocation is specified below. It is executed from the repositories root folder. NOT the `yocto` directory.
-```shell
-./scripts/build.sh -c -t Debug -o ~/yocto_build_dir         
+
+```sh
+./scripts/build.sh -c -t Debug -o ~/yocto_build_dir
 ```
 
 You can use:
-```shell
+
+```sh
 ./scripts/build.sh -h
 ```
 to see the list of all options for the build. 
