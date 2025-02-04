@@ -33,7 +33,7 @@ parameters:
 - name: adu_delta_src_uri
   displayName: "ADU Delta Source URI"
   type: string
-  default: "git://github.com/azure/io-thub-device-update-delta"
+  default: "git://github.com/azure/iot-hub-device-update-delta"
 - name: adu_delta_git_branch
   displayName: "ADU Delta Git Branch"
   type: string
