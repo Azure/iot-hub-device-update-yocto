@@ -33,18 +33,18 @@ print_help()
     echo "-h, --help                    Show this help message."
 }
 
-# Defaults
-ADU_GIT_BRANCH=main
-ADU_GIT_COMMIT=33554d29476eab2447234528c8aed186e2b6423d
-ADU_SRC_URI=gitsm://github.com/Azure/iot-hub-device-update
+# Defaults - GEN 2
+ADU_GIT_BRANCH='main'
+ADU_GIT_COMMIT='e981f7a9af5f561f98a3be9ea9563f4d0f256e63'
+ADU_SRC_URI='git://github.com/Azure/device-update'
 
-DO_GIT_BRANCH=main
-DO_GIT_COMMIT=b61de2d347c8032562056b18f90ec710e531baf8
-DO_SRC_URI=gitsm://github.com/microsoft/do-client
+DO_GIT_BRANCH='main'
+DO_GIT_COMMIT='b61de2d347c8032562056b18f90ec710e531baf8'
+DO_SRC_URI='gitsm://github.com/microsoft/do-client'
 
-ADU_DELTA_GIT_BRANCH=main
-ADU_DELTA_GIT_COMMIT=57efe4360f52b297ae54323271c530239fb1d1c7
-ADU_DELTA_SRC_URI=gitsm://github.com/Azure/iot-hub-device-update-delta
+ADU_DELTA_GIT_BRANCH='main'
+ADU_DELTA_GIT_COMMIT='57efe4360f52b297ae54323271c530239fb1d1c7'
+ADU_DELTA_SRC_URI='gitsm://github.com/Azure/iot-hub-device-update-delta'
 
 BUILD_DIR=$ROOT_DIR/build
 CLEAN=false
@@ -226,5 +226,6 @@ else
             adu-update-image
     fi
 
+    #bitbake -D adu-update-image
     bitbake adu-update-image
 fi
