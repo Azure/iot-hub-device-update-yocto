@@ -12,6 +12,25 @@ The repository and instructions create an image for the RaspberryPi 4 which can 
 
 For more information about the Device Update for IoT Hub, see the link to the source code of [Device Update Agent](https://github.com/Azure/iot-hub-device-update)
 
+## Quick Start
+
+```sh
+# Ensure at least 100GB of space for the partition for $HOME (or modify the paths below
+
+git clone git@github.com:azure/iot-hub-device-update-yocto.git --branch scarthgap ~/adu_yocto/iot-hub-device-update-yocto
+
+cd ~/adu_yocto/iot-hub-device-update-yocto
+
+./scripts/install-deps.sh
+./scripts/setup.sh
+
+./scripts/build.sh -c -t Debug -o ~/adu_yocto/out
+
+pushd ~/adu_yocto/out
+find . -type f -name '*.wic' | grep -i deploy
+```
+
+
 ## Prerequisites
 
 Before getting started with this project, please get yourself familiar with the following topics:
