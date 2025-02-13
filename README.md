@@ -62,11 +62,8 @@ cd $HOME/adu_yocto/iot-hub-device-update-yocto
 #
 # The private cert, keys/priv.pem, is what should be used when creating the sw-description signature file in swupdate CPIO package.
 # The public cert, keys/pub.pem, will be installed into the .wic raw image file produced by bitbake.
-#
-# This is so that devices receiving swupdate updates will have the public key with which to pass to the swupdate script from the 
-# script payload that flows down along with the .wic image payload.
-# so it can verify the sw-description signature when applying the swupdate update.
-# These are needed so that 
+# The script update payload (side-by-side with the .swu swupdate payload) would call out to swupdate utility with the path to this
+# public cert. swupdate on the device will use it to verify sw-description signature file in the .swu swupdate CPIO archive.
 pushd keys
 echo "PUT A PASSWORD FOR swupdate sw-description signing HERE" > ./priv.pass
 openssl genrsa -out ./priv.pem -passout file:./priv.pass
