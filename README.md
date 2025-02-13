@@ -23,7 +23,7 @@ The final directory structure as per the "quick step" exports below  are as foll
 ```
 $HOME
   └ adu_yocto/
-    ├── iot-hub-device-update-yocto ( github repo with scripts )
+    ├── iot-hub-device-update-yocto               # github repo with scripts
     │   ├── azurepipelines
     │   ├── keys
     │   ├── scripts
@@ -37,10 +37,10 @@ $HOME
     │       ├── meta-swupdate                     # swupdate layer
     │       └── poky
     └── out
-        ├── build         (post successful yocto build)
-        ├── cache         (post successful yocto build)
-        ├── conf          (post successful yocto build)
-        └── sstate-cache  (post successful yocto build)
+        ├── build                                 # post successful yocto build
+        ├── cache                                 # post successful yocto build
+        ├── conf                                  # post successful yocto build
+        └── sstate-cache                          # post successful yocto build
 ```
 
 ### Quick Steps
