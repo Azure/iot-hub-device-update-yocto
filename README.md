@@ -24,6 +24,12 @@ cd ~/adu_yocto/iot-hub-device-update-yocto
 ./scripts/install-deps.sh
 ./scripts/setup.sh
 
+pushd keys
+echo "PUT A PASSWORD FOR swupdate sw-description signing HERE" > ./priv.pass
+openssl genrsa -out ./priv.pem -passout file:./priv.pass
+openssl rsa -in ./priv.pem -passin file:priv.pass -out public.pem -outform PEM -pubout
+popd
+
 ./scripts/build.sh -c -t Debug -o ~/adu_yocto/out
 
 pushd ~/adu_yocto/out
