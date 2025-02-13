@@ -14,9 +14,11 @@ For more information about the Device Update for IoT Hub, see the link to the so
 
 ## Quick Start
 
-```sh
-# Ensure at least 100GB of space for the partition for $HOME (or modify the paths below
+On a machine installed with [Ubuntu 20.04 LTS (Focal Fossa) Server ISO](https://cdimage.ubuntu.com/ubuntu-legacy-server/releases/20.04/release/ubuntu-20.04.1-legacy-server-amd64.iso),
+ensure at least 100GB of space on the partition where /home is mounted (or adjust the steps below accordingly).
 
+
+```sh
 git clone git@github.com:azure/iot-hub-device-update-yocto.git --branch scarthgap ~/adu_yocto/iot-hub-device-update-yocto
 
 cd ~/adu_yocto/iot-hub-device-update-yocto
