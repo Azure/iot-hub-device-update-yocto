@@ -15,7 +15,7 @@ For more information about the Device Update for IoT Hub, see the link to the so
 ## Quick Start
 
 On a machine installed with [Ubuntu 20.04 LTS (Focal Fossa) Server ISO](https://cdimage.ubuntu.com/ubuntu-legacy-server/releases/20.04/release/ubuntu-20.04.1-legacy-server-amd64.iso),
-ensure at least 100GB of space on the partition where /home is mounted (or adjust the `base_yocto_path` var in the steps below accordingly).
+ensure at least 100GB of space on the partition where /home is mounted (or adjust the `base_yocto_path` var in the steps below and in scripts/setup.sh accordingly).
 
 ### Directory Structure After Quick Steps
 
