@@ -12,6 +12,73 @@ The repository and instructions create an image for the RaspberryPi 4 which can 
 
 For more information about the Device Update for IoT Hub, see the link to the source code of [Device Update Agent](https://github.com/Azure/iot-hub-device-update)
 
+## Quick Start
+
+On a machine installed with [Ubuntu 20.04 LTS (Focal Fossa) Server ISO](https://cdimage.ubuntu.com/ubuntu-legacy-server/releases/20.04/release/ubuntu-20.04.1-legacy-server-amd64.iso),
+ensure at least 100GB of space on the partition where /home is mounted (or adjust the `base_yocto_path` var in the steps below and in scripts/setup.sh accordingly).
+
+### Directory Structure After Quick Steps
+
+The final directory structure as per the "quick step" exports below  are as follows:
+```
+$HOME
+  └ adu_yocto/
+    ├── iot-hub-device-update-yocto               # github repo with scripts
+    │   ├── azurepipelines
+    │   ├── keys
+    │   ├── scripts
+    │   └── yocto
+    │       ├── config-templates
+    │       ├── meta-azure-device-update          # DU Agent yocto recipes
+    │       ├── meta-iot-hub-device-update-delta  # Delta updates recipe - (Currently DISABLED)
+    │       ├── meta-openembedded                 # OpenEmbedded layers
+    │       ├── meta-raspberrypi                  # RPi layers
+    │       ├── meta-raspberrypi-adu              # ADU-specific RPi layer
+    │       ├── meta-swupdate                     # swupdate layer
+    │       └── poky
+    └── out
+        ├── build                                 # post successful yocto build
+        ├── cache                                 # post successful yocto build
+        ├── conf                                  # post successful yocto build
+        └── sstate-cache                          # post successful yocto build
+```
+
+### Quick Steps
+
+```sh
+# Clone the main yocto repo that has install-deps.sh, setup.sh, and build.sh scripts.
+git clone 'git@github.com:azure/iot-hub-device-update-yocto.git' --branch scarthgap "$HOME/adu_yocto/iot-hub-device-update-yocto"
+git clone 'https://github.com/azure/iot-hub-device-update-yocto' --branch scarthgap "$HOME/adu_yocto/iot-hub-device-update-yocto"
+
+cd $HOME/adu_yocto/iot-hub-device-update-yocto
+
+# Install dev dependencies via ubuntu 20.04 APT packages.
+./scripts/install-deps.sh
+
+# Clones poky and the meta layers to dirs under $HOME/adu_yocto/yocto/
+./scripts/setup.sh
+
+# Create private/public key pair with password-protected private key in the "keys" folder
+#
+# The private cert, keys/priv.pem, is what should be used when creating the sw-description signature file in swupdate CPIO package.
+# The public cert, keys/pub.pem, will be installed into the .wic raw image file produced by bitbake.
+# The script update payload (side-by-side with the .swu swupdate payload) would call out to swupdate utility with the path to this
+# public cert. swupdate on the device will use it to verify sw-description signature file in the .swu swupdate CPIO archive.
+pushd keys
+echo "PUT A PASSWORD FOR swupdate sw-description signing HERE" > ./priv.pass
+openssl genrsa -out ./priv.pem -passout file:./priv.pass
+openssl rsa -in ./priv.pem -passin file:priv.pass -out public.pem -outform PEM -pubout
+popd
+
+# Launch bitbake to build the .wic image as per the yocto recipes.
+./scripts/build.sh -c -t Debug -o ~/adu_yocto/out
+
+# List the deployment .wic file and symlink to it.
+pushd ~/adu_yocto/out
+find . -type f -name '*.wic' | grep -i deploy
+```
+
+
 ## Prerequisites
 
 Before getting started with this project, please get yourself familiar with the following topics:
