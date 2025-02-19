@@ -26,6 +26,7 @@ print_help()
     echo "--core-image-only             Build the core-image only."
     echo "--aziot-c-sdk-only            Build Azure IoT C SDK only."
     echo "--adu-delta-only              Build Azure Device Update Delta library only."
+    echo "--adu-generation              The generation of the azure device update agent. Options are 1 and 2. Default is 1."
     echo "-o, --out-dir <build_dir>     Set the build output directory. Default is build."
     echo ""
     echo "-p, --private-preview         Build private preview version (use docs before renamed to deliveryoptimization-agent."
@@ -53,6 +54,7 @@ REBUILD=false
 BUILD_CORE_IMAGE_ONLY=0
 BUILD_AZIOT_C_SDK_ONLY=0
 BUILD_ADU_DELTA_ONLY=0
+ADU_GEN=1
 SET_ENV_ONLY=0
 
 while [[ $1 != "" ]]; do
@@ -107,6 +109,14 @@ while [[ $1 != "" ]]; do
         echo "build ADU Delta lib only..."
         BUILD_ADU_DELTA_ONLY=1
         ;;
+    --adu-generation)
+        shift
+        ADU_GEN="$1"
+        if [[ $ADU_GEN != 1 && $ADU_GEN != 2 ]]; then
+            echo "Invalid --adu-generation value: $ADU_GEN" >&2
+            exit 1
+        fi
+        ;;
     --set-env-only)
         SET_ENV_ONLY=1
         ;;
@@ -141,6 +151,7 @@ while [[ $1 != "" ]]; do
 done
 
 export MACHINE=raspberrypi4-64
+export ADU_GENERATION="$ADU_GEN"
 
 # Need to work on what this is
 export TEMPLATECONF=$ROOT_DIR/meta-raspberrypi-adu/conf/templates/$MACHINE/
