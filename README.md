@@ -88,22 +88,22 @@ Before getting started with this project, please get yourself familiar with the 
 
 ### Get Source Code
 
-Please note that, at the time of this writing, we only support `kirkstone` release of the Yocto Project. 
+Please note that, at the time of this writing, we only support `scarthgap` release of the Yocto Project. 
 
 The following variables are referenced in the below section setting up the build. 
 
 | Variable Name | Description |
 |---|---|
-| $yocto_release | A name of the version of the Yocto Project used to build the images.<br/>(Only support `kirkstone` at the moment) |
+| $yocto_release | A name of the version of the Yocto Project used to build the images.<br/>(Only support `scarthgap` at the moment) |
 | $project_root  | A root directory where this project will be cloned into.|
 | $adu_release   | The release of Device Update you're planning on using (should default to `'main'`) | 
 
-You can either just include the string wholesale in the terminal (eg for `$yocto_release` just use `'kirkstone'`) or set the variable at the beginning and then copy the command from this screen.
+You can either just include the string wholesale in the terminal (eg for `$yocto_release` just use `'scarthgap'`) or set the variable at the beginning and then copy the command from this screen.
 
 You can set a bash variable like `yocto_release` like this:
 
 ```sh
-yocto_release=kirkstone
+yocto_release=scarthgap
 ```
 and for `adu_release` like this: 
 
@@ -227,7 +227,7 @@ If successful, the output image file (adu-base-image-raspberrypi4-64.wic.gz) and
 
 | Board | Branch | Status |
 |---|---|---|
-| Raspberry Pi 4 | kirkstone | [![Build Status](https://dev.azure.com/azure-device-update/adu-linux-client/_apis/build/status/azure.iot-hub-device-update-yocto?branchName=honister)](https://dev.azure.com/azure-device-update/adu-linux-client/_build/latest?definitionId=57&branchName=kirkstone)|
+| Raspberry Pi 4 | scarthgap | [![Build Status](https://dev.azure.com/azure-device-update/adu-linux-client/_apis/build/status/azure.iot-hub-device-update-yocto?branchName=scarthgap)](https://dev.azure.com/azure-device-update/adu-linux-client/_build/latest?definitionId=57&branchName=scarthgap)|
 
 
 ## Using Your Own Board and Guidance for Production Images
