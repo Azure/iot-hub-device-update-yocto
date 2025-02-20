@@ -30,7 +30,7 @@ $HOME
     │   └── yocto
     │       ├── config-templates
     │       ├── meta-azure-device-update          # DU Agent yocto recipes
-    │       ├── meta-iot-hub-device-update-delta  # Delta updates recipe - (Currently DISABLED)
+    │       ├── meta-iot-hub-device-update-delta  # Delta updates recipe - (Currently NOT working)
     │       ├── meta-openembedded                 # OpenEmbedded layers
     │       ├── meta-raspberrypi                  # RPi layers
     │       ├── meta-raspberrypi-adu              # ADU-specific RPi layer
