@@ -82,10 +82,11 @@ find . -type f -name '*.wic' | grep -i deploy
 ### Quick Steps - Gen 2
 
 ```sh
-# Same as Quick Steps - Gen 1, but provide cmdline arg overrides for build.sh
+# Same as Quick Steps - Gen 1, but provide cmdline arg overrides for build.sh and --adu-generation "2"
 # For example:
 
 ./scripts/build.sh -c -t Debug -o ~/adu_yocto/out \
+    --adu-generation "2" \
     --adu-git-branch 'main' \
     --adu-git-commit 'e981f7a9af5f561f98a3be9ea9563f4d0f256e63' \
     --adu-src-uri 'git://github.com/Azure/device-update'
