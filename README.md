@@ -43,7 +43,7 @@ $HOME
         └── sstate-cache                          # post successful yocto build
 ```
 
-### Quick Steps
+### Quick Steps - Gen 1
 
 ```sh
 # Clone the main yocto repo that has install-deps.sh, setup.sh, and build.sh scripts.
@@ -76,6 +76,20 @@ popd
 # List the deployment .wic file and symlink to it.
 pushd ~/adu_yocto/out
 find . -type f -name '*.wic' | grep -i deploy
+```
+
+
+### Quick Steps - Gen 2
+
+```sh
+# Same as Quick Steps - Gen 1, but provide cmdline arg overrides for build.sh
+# For example:
+
+./scripts/build.sh -c -t Debug -o ~/adu_yocto/out \
+    --adu-git-branch 'main' \
+    --adu-git-commit 'e981f7a9af5f561f98a3be9ea9563f4d0f256e63' \
+    --adu-src-uri 'git://github.com/Azure/device-update'
+
 ```
 
 
