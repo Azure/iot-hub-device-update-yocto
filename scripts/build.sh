@@ -35,6 +35,7 @@ Usage: build.sh [options...]
                                      e.g. --clean-fetch-recipe azure-device-update
 
     -o, --out-dir <build_dir>        Set the build output directory. Default is build.
+    --verbose                        Add -v to bitbake cmdline for verbose output.
 
     -h, --help                       Show this help message.
 ENDOFUSAGE
@@ -74,6 +75,7 @@ BUILD_AZIOT_C_SDK_ONLY=0
 BUILD_ADU_DELTA_ONLY=0
 CLEAN_FETCH_RECIPE=''
 ADU_GEN=1
+VERBOSE=''
 SET_ENV_ONLY=0
 
 while [[ $1 != "" ]]; do
@@ -162,6 +164,9 @@ while [[ $1 != "" ]]; do
         shift
         BUILD_DIR=$1
         ;;
+    --verbose)
+        VERBOSE='-v'
+        ;;
     *)
         print_help
         exit 1
@@ -233,19 +238,19 @@ export BB_ENV_PASSTHROUGH_ADDITIONS="$BB_ENV_PASSTHROUGH_ADDITIONS ADU_GIT_BRANC
 source $ROOT_DIR/poky/oe-init-build-env $BUILD_DIR
 
 if [[ $CLEAN_FETCH_RECIPE != '' ]]; then
-    bitbake -c cleanall "$CLEAN_FETCH_RECIPE"
-    bitbake -c fetch "$CLEAN_FETCH_RECIPE" -v
+    bitbake $VERBOSE -c cleanall "$CLEAN_FETCH_RECIPE"
+    bitbake $VERBOSE -c fetch "$CLEAN_FETCH_RECIPE"
 elif [[ $BUILD_CORE_IMAGE_ONLY == 1 ]]; then
-    bitbake \
+    bitbake $VERBOSE \
         core-image-full-cmdline \
         core-image-minimal
 elif [[ $BUILD_AZIOT_C_SDK_ONLY == 1 ]]; then
-    bitbake azure-iot-sdk-c
+    bitbake $VERBOSE azure-iot-sdk-c
 elif [[ $BUILD_ADU_DELTA_ONLY == 1 ]]; then
-    bitbake -c clean -C compile -f azure-device-update-diffs
+    bitbake $VERBOSE -c clean -C compile -f azure-device-update-diffs
 else
     if [[ $CLEAN == 'true' ]]; then
-        bitbake -c cleanall  -f \
+        bitbake $VERBOSE -c cleanall  -f \
             azure-device-update \
             adu-agent-service \
             azure-iot-sdk-c \
@@ -255,10 +260,10 @@ else
             core-image-full-cmdline \
             core-image-minimal 
 
-        bitbake -c cleanall  -f \
+        bitbake $VERBOSE -c cleanall  -f \
             adu-base-image \
             adu-update-image
     fi
 
-    bitbake -DDD adu-update-image
+    bitbake $VERBOSE adu-update-image
 fi
