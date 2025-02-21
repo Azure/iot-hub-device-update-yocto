@@ -31,6 +31,8 @@ Usage: build.sh [options...]
     --core-image-only                Build the core-image only.
     --aziot-c-sdk-only               Build Azure IoT C SDK only.
     --adu-delta-only                 Build Azure Device Update Delta library only.
+    --clean-fetch-recipe <recipe>    Does bitbake -c cleanall <recipe>; bitbake -c fetch <recipe> -v
+                                     e.g. --clean-fetch-recipe azure-device-update
 
     -o, --out-dir <build_dir>        Set the build output directory. Default is build.
 
@@ -40,8 +42,7 @@ ENDOFUSAGE
 
 # Defaults - Gen 1
 ADU_GIT_BRANCH='develop'
-ADU_SRC_URI='https://github.com/Azure/iot-hub-device-update'
-SRC_URI="${ADU_SRC_URI};protocol=https;branch=${ADU_GIT_BRANCH}"
+ADU_SRC_URI='git://github.com/Azure/iot-hub-device-update'
 ADU_GIT_COMMIT='350a551dd9d3f5639eddceb75ef5b10e834865fe'
 BUILD_TYPE='Debug'
 WITH_FEATURE_DELTA_UPDATE='0'
@@ -54,7 +55,6 @@ WITH_FEATURE_DELTA_UPDATE='0'
 #   -- adu-git-commit
 # ADU_GIT_BRANCH='main'
 # ADU_SRC_URI='git://github.com/Azure/device-update'
-# SRC_URI="${ADU_SRC_URI};protocol=https;branch=${ADU_GIT_BRANCH}"
 # ADU_GIT_COMMIT='e981f7a9af5f561f98a3be9ea9563f4d0f256e63'
 # BUILD_TYPE='Debug'
 # WITH_FEATURE_DELTA_UPDATE='0'
@@ -72,6 +72,7 @@ REBUILD=false
 BUILD_CORE_IMAGE_ONLY=0
 BUILD_AZIOT_C_SDK_ONLY=0
 BUILD_ADU_DELTA_ONLY=0
+CLEAN_FETCH_RECIPE=''
 ADU_GEN=1
 SET_ENV_ONLY=0
 
@@ -126,6 +127,11 @@ while [[ $1 != "" ]]; do
     --adu-delta-only)
         echo 'build ADU Delta lib only...'
         BUILD_ADU_DELTA_ONLY=1
+        ;;
+    --clean-fetch-recipe)
+        shift
+        CLEAN_FETCH_RECIPE="$1"
+        echo "debugging fetch of recipe '${FETCH_RECIPE}' ..."
         ;;
     --adu-generation)
         shift
@@ -226,7 +232,10 @@ export SSTATE_DIR=$BUILD_DIR/sstate-cache
 export BB_ENV_PASSTHROUGH_ADDITIONS="$BB_ENV_PASSTHROUGH_ADDITIONS ADU_GIT_BRANCH ADU_SRC_URI ADU_GIT_COMMIT DO_GIT_BRANCH DO_SRC_URI DO_GIT_COMMIT ADU_DELTA_GIT_BRANCH ADU_DELTA_SRC_URI ADU_DELTA_GIT_COMMIT BUILD_TYPE ADU_SOFTWARE_VERSION ADUC_PRIVATE_KEY ADUC_PRIVATE_KEY_PASSWORD SSTATE_DIR"
 source $ROOT_DIR/poky/oe-init-build-env $BUILD_DIR
 
-if [[ $BUILD_CORE_IMAGE_ONLY == 1 ]]; then
+if [[ $CLEAN_FETCH_RECIPE != '' ]]; then
+    bitbake -c cleanall "$CLEAN_FETCH_RECIPE"
+    bitbake -c fetch "$CLEAN_FETCH_RECIPE" -v
+elif [[ $BUILD_CORE_IMAGE_ONLY == 1 ]]; then
     bitbake \
         core-image-full-cmdline \
         core-image-minimal
@@ -251,6 +260,5 @@ else
             adu-update-image
     fi
 
-    #bitbake -D adu-update-image
-    bitbake adu-update-image
+    bitbake -DDD adu-update-image
 fi
