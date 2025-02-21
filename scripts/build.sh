@@ -40,7 +40,7 @@ ENDOFUSAGE
 
 # Defaults - Gen 1
 ADU_GIT_BRANCH='develop'
-ADU_SRC_URI='git://github.com/Azure/iot-hub-device-update'
+ADU_SRC_URI='https://github.com/Azure/iot-hub-device-update'
 SRC_URI="${ADU_SRC_URI};protocol=https;branch=${ADU_GIT_BRANCH}"
 ADU_GIT_COMMIT='350a551dd9d3f5639eddceb75ef5b10e834865fe'
 BUILD_TYPE='Debug'
