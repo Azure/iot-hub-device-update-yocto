@@ -5,47 +5,67 @@ ROOT_DIR=$SCRIPT_DIR/../yocto/
 
 print_help()
 {
-    echo "Usage: build.sh [options...]"
-    echo "-c, --clean                   Execute a (somewhat) clean build."
-    echo "-t, --type <build_type>       The type of build to produce. Passed to CMAKE_BUILD_TYPE."
-    echo "                              Options are Debug, Release, RelWithDebInfo, MinSizeRel. Default is Debug."
-    echo ""
-    echo "--rebuild                     Execute a full rebuild from scratch. The build will take around 7 hours."
-    echo ""
-    echo "--adu-git-branch <branch>        Sets the ADU client branch to build. Default is main."
-    echo "--adu-src-uri <uri>              Sets the URI for the ADU client repo. Useful to build ADUC source from local path."
-    echo "--adu-git-commit <commit hash>   Sets the commit hash for the ADU client repo. Useful to build ADUC source from local path."
-    echo "--do-git-branch <branch>         Sets the DL client branch to build. Default is main."
-    echo "--do-src-uri <uri>               Sets the URI for the DO client repo. Useful to build DO source from local path."
-    echo "--do-git-commit <commit hash>    Sets the commit hash for the DO client repo. Useful to build ADUC source from local path."
-    echo "--adu-delta-git-branch <branch>  Sets the ADU Delta branch to build. Default is main."
-    echo "--adu-delta-src-uri <uri>        Sets the URI for the ADU Delta (FIT) repo. Useful to build FIT source from local path."
-    echo "--adu-delta-git-commit <hash>    Sets the commit hash for the ADU Delta repo. Useful to build ADUC source from local path."
-    echo ""
-    echo "-v, --version <sw_version>    Sets the software version of this build. This version is baked into the image."
-    echo "--core-image-only             Build the core-image only."
-    echo "--aziot-c-sdk-only            Build Azure IoT C SDK only."
-    echo "--adu-delta-only              Build Azure Device Update Delta library only."
-    echo "-o, --out-dir <build_dir>     Set the build output directory. Default is build."
-    echo ""
-    echo "-p, --private-preview         Build private preview version (use docs before renamed to deliveryoptimization-agent."
-    echo ""
-    echo "-h, --help                    Show this help message."
+    cat << ENDOFUSAGE
+Usage: build.sh [options...]
+    -c, --clean                      Clean build.
+    -t, --type <build_type>          CMAKE_BUILD_TYPE
+                                     Options are Debug, Release, RelWithDebInfo, MinSizeRel. Default is Debug.
+    --rebuild                        Execute a full rebuild
+
+    --adu-generation                 The device update agent. Options are 1 and 2. Default is 1.
+
+    --adu-git-branch <branch>        Set the ADU Client (ADUC) branch to build. Default is 'develop'.
+    --adu-src-uri <uri>              Set the URI for the ADUC repo.
+    --adu-git-commit <commit hash>   Set the commit hash for the ADUC repo.
+    --do-git-branch <branch>         Set the DO client branch to build. Default is main.
+    --do-src-uri <uri>               Set the URI for the DO client repo.
+    --do-git-commit <commit hash>    Set the commit hash for the DO client repo.
+
+    --with-delta-update '1'|'0'      Allows enabling and disabling delta recipe. Default is '0' to disable.
+    --adu-delta-git-branch <branch>  Set the ADU Delta branch to build. Default is main.
+    --adu-delta-src-uri <uri>        Set the URI for the ADU Delta (FIT) repo.
+    --adu-delta-git-commit <hash>    Set the commit hash for the ADU Delta repo.
+
+    -v, --version <sw_version>       Set the software version of this build that is baked into the image.
+
+    --core-image-only                Build the core-image only.
+    --aziot-c-sdk-only               Build Azure IoT C SDK only.
+    --adu-delta-only                 Build Azure Device Update Delta library only.
+    --clean-fetch-recipe <recipe>    Does bitbake -c cleanall <recipe>; bitbake -c fetch <recipe> -v
+                                     e.g. --clean-fetch-recipe azure-device-update
+
+    -o, --out-dir <build_dir>        Set the build output directory. Default is build.
+    --verbose                        Add -v to bitbake cmdline for verbose output.
+
+    -h, --help                       Show this help message.
+ENDOFUSAGE
 }
 
-# Defaults - GEN 2
-ADU_GIT_BRANCH='main'
-ADU_GIT_COMMIT='e981f7a9af5f561f98a3be9ea9563f4d0f256e63'
-ADU_SRC_URI='git://github.com/Azure/device-update'
+# Defaults - Gen 1
+ADU_GIT_BRANCH='develop'
+ADU_SRC_URI='git://github.com/Azure/iot-hub-device-update'
+ADU_GIT_COMMIT='350a551dd9d3f5639eddceb75ef5b10e834865fe'
+BUILD_TYPE='Debug'
+WITH_FEATURE_DELTA_UPDATE='0'
 
-DO_GIT_BRANCH='main'
-DO_GIT_COMMIT='b61de2d347c8032562056b18f90ec710e531baf8'
-DO_SRC_URI='gitsm://github.com/microsoft/do-client'
+# Example - Gen 2 to use via cmdline args such as:
+#   --adu-generation 2
+# with:
+#   --adu-git-branch
+#   --adu-src-uri
+#   -- adu-git-commit
+# ADU_GIT_BRANCH='main'
+# ADU_SRC_URI='git://github.com/Azure/device-update'
+# ADU_GIT_COMMIT='e981f7a9af5f561f98a3be9ea9563f4d0f256e63'
+# BUILD_TYPE='Debug'
+# WITH_FEATURE_DELTA_UPDATE='0'
 
+# Defaults - Gen 1 and Gen 2
 ADU_DELTA_GIT_BRANCH='main'
 ADU_DELTA_GIT_COMMIT='57efe4360f52b297ae54323271c530239fb1d1c7'
 ADU_DELTA_SRC_URI='gitsm://github.com/Azure/iot-hub-device-update-delta'
 
+# vars for cmdline arg parsing
 BUILD_DIR=$ROOT_DIR/build
 CLEAN=false
 BUILD_TYPE=Debug
@@ -53,6 +73,9 @@ REBUILD=false
 BUILD_CORE_IMAGE_ONLY=0
 BUILD_AZIOT_C_SDK_ONLY=0
 BUILD_ADU_DELTA_ONLY=0
+CLEAN_FETCH_RECIPE=''
+ADU_GEN=1
+VERBOSE=''
 SET_ENV_ONLY=0
 
 while [[ $1 != "" ]]; do
@@ -104,8 +127,21 @@ while [[ $1 != "" ]]; do
         BUILD_AZIOT_C_SDK_ONLY=1
         ;;
     --adu-delta-only)
-        echo "build ADU Delta lib only..."
+        echo 'build ADU Delta lib only...'
         BUILD_ADU_DELTA_ONLY=1
+        ;;
+    --clean-fetch-recipe)
+        shift
+        CLEAN_FETCH_RECIPE="$1"
+        echo "debugging fetch of recipe '${FETCH_RECIPE}' ..."
+        ;;
+    --adu-generation)
+        shift
+        ADU_GEN="$1"
+        if [[ $ADU_GEN != '1' && $ADU_GEN != '2' ]]; then
+            echo "Invalid --adu-generation value: $ADU_GEN" >&2
+            exit 1
+        fi
         ;;
     --set-env-only)
         SET_ENV_ONLY=1
@@ -128,9 +164,8 @@ while [[ $1 != "" ]]; do
         shift
         BUILD_DIR=$1
         ;;
-    -p | --private-preview)
-        shift
-        PRIVATE_PREVIEW=true
+    --verbose)
+        VERBOSE='-v'
         ;;
     *)
         print_help
@@ -140,7 +175,8 @@ while [[ $1 != "" ]]; do
     shift
 done
 
-export MACHINE=raspberrypi4-64
+export MACHINE='raspberrypi4-64'
+export ADU_GENERATION="$ADU_GEN"
 
 # Need to work on what this is
 export TEMPLATECONF=$ROOT_DIR/meta-raspberrypi-adu/conf/templates/$MACHINE/
@@ -190,7 +226,7 @@ export ADUC_PRIVATE_KEY=$ADUC_KEY_DIR/priv.pem
 export ADUC_PRIVATE_KEY_PASSWORD=$ADUC_KEY_DIR/priv.pass
 
 # Remove all build output files for a full rebuild.
-if [[ $REBUILD == "true" ]]; then
+if [[ $REBUILD == 'true' ]]; then
     rm -rf $BUILD_DIR/*
 fi
 
@@ -201,17 +237,20 @@ export SSTATE_DIR=$BUILD_DIR/sstate-cache
 export BB_ENV_PASSTHROUGH_ADDITIONS="$BB_ENV_PASSTHROUGH_ADDITIONS ADU_GIT_BRANCH ADU_SRC_URI ADU_GIT_COMMIT DO_GIT_BRANCH DO_SRC_URI DO_GIT_COMMIT ADU_DELTA_GIT_BRANCH ADU_DELTA_SRC_URI ADU_DELTA_GIT_COMMIT BUILD_TYPE ADU_SOFTWARE_VERSION ADUC_PRIVATE_KEY ADUC_PRIVATE_KEY_PASSWORD SSTATE_DIR"
 source $ROOT_DIR/poky/oe-init-build-env $BUILD_DIR
 
-if [[ $BUILD_CORE_IMAGE_ONLY == 1 ]]; then
-    bitbake \
+if [[ $CLEAN_FETCH_RECIPE != '' ]]; then
+    bitbake $VERBOSE -c cleanall "$CLEAN_FETCH_RECIPE"
+    bitbake $VERBOSE -c fetch "$CLEAN_FETCH_RECIPE"
+elif [[ $BUILD_CORE_IMAGE_ONLY == 1 ]]; then
+    bitbake $VERBOSE \
         core-image-full-cmdline \
         core-image-minimal
 elif [[ $BUILD_AZIOT_C_SDK_ONLY == 1 ]]; then
-    bitbake azure-iot-sdk-c
+    bitbake $VERBOSE azure-iot-sdk-c
 elif [[ $BUILD_ADU_DELTA_ONLY == 1 ]]; then
-    bitbake -c clean -C compile -f azure-device-update-diffs
+    bitbake $VERBOSE -c clean -C compile -f azure-device-update-diffs
 else
-    if [[ $CLEAN == "true" ]]; then
-        bitbake -c cleanall  -f \
+    if [[ $CLEAN == 'true' ]]; then
+        bitbake $VERBOSE -c cleanall  -f \
             azure-device-update \
             adu-agent-service \
             azure-iot-sdk-c \
@@ -221,11 +260,10 @@ else
             core-image-full-cmdline \
             core-image-minimal 
 
-        bitbake -c cleanall  -f \
+        bitbake $VERBOSE -c cleanall  -f \
             adu-base-image \
             adu-update-image
     fi
 
-    #bitbake -D adu-update-image
-    bitbake adu-update-image
+    bitbake $VERBOSE adu-update-image
 fi
