@@ -44,7 +44,7 @@ ENDOFUSAGE
 # Defaults - Gen 1
 ADU_GIT_BRANCH='develop'
 ADU_SRC_URI='git://github.com/Azure/iot-hub-device-update'
-ADU_GIT_COMMIT='350a551dd9d3f5639eddceb75ef5b10e834865fe'
+ADU_GIT_COMMIT='370da9993c2391be4c80f0698522572aa5ad3b2d'
 BUILD_TYPE='Debug'
 WITH_FEATURE_DELTA_UPDATE='0'
 
@@ -149,6 +149,7 @@ while [[ $1 != "" ]]; do
     -v | --version)
         shift
         VERSION=$1
+        echo "Using VERSION -> $VERSION ..."
         ;;
     -c | --clean)
         CLEAN=true
