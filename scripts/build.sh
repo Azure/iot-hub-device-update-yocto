@@ -101,6 +101,7 @@ while [[ $1 != "" ]]; do
         ;;
     --use-test-root-keys)
         USE_TEST_ROOT_KEYS=1
+        echo "*** Using TEST Root Keys! ***"
         ;;
     --do-git-branch)
         shift
