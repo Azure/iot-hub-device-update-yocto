@@ -26,6 +26,8 @@ Usage: build.sh [options...]
     --adu-delta-src-uri <uri>        Set the URI for the ADU Delta (FIT) repo.
     --adu-delta-git-commit <hash>    Set the commit hash for the ADU Delta repo.
 
+    --use-test-root-keys             Uses test root keys instead of prod root keys and enables e2e testing.
+
     -v, --version <sw_version>       Set the software version of this build that is baked into the image.
 
     --core-image-only                Build the core-image only.
@@ -77,6 +79,7 @@ CLEAN_FETCH_RECIPE=''
 ADU_GEN=1
 VERBOSE=''
 SET_ENV_ONLY=0
+USE_TEST_ROOT_KEYS=0
 
 while [[ $1 != "" ]]; do
     case $1 in
@@ -95,6 +98,10 @@ while [[ $1 != "" ]]; do
     --adu-git-commit)
         shift
         ADU_GIT_COMMIT=$1
+        ;;
+    --use-test-root-keys)
+        USE_TEST_ROOT_KEYS=1
+        echo "*** Using TEST Root Keys! ***"
         ;;
     --do-git-branch)
         shift
@@ -181,6 +188,10 @@ export ADU_GENERATION="$ADU_GEN"
 
 # Need to work on what this is
 export TEMPLATECONF=$ROOT_DIR/meta-raspberrypi-adu/conf/templates/$MACHINE/
+
+if [[ $USE_TEST_ROOT_KEYS == 1 ]]; then
+    export ADU_EMBED_TEST_ROOT_KEYS="1"
+fi
 
 if [ -n "${ADU_SRC_URI}" ]; then
     export ADU_SRC_URI
