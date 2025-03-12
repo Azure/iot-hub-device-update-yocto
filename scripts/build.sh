@@ -79,7 +79,7 @@ CLEAN_FETCH_RECIPE=''
 ADU_GEN=1
 VERBOSE=''
 SET_ENV_ONLY=0
-USE_TEST_ROOT_KEYS=0
+ADU_EMBED_TEST_ROOT_KEYS=0
 
 while [[ $1 != "" ]]; do
     case $1 in
@@ -100,8 +100,8 @@ while [[ $1 != "" ]]; do
         ADU_GIT_COMMIT=$1
         ;;
     --use-test-root-keys)
-        USE_TEST_ROOT_KEYS=1
-        echo "*** Using TEST Root Keys! ***"
+        ADU_EMBED_TEST_ROOT_KEYS=1
+        echo -e '*** Using TEST Root Keys! ***\n'
         ;;
     --do-git-branch)
         shift
@@ -185,13 +185,10 @@ done
 
 export MACHINE='raspberrypi4-64'
 export ADU_GENERATION="$ADU_GEN"
+export ADU_EMBED_TEST_ROOT_KEYS
 
 # Need to work on what this is
 export TEMPLATECONF=$ROOT_DIR/meta-raspberrypi-adu/conf/templates/$MACHINE/
-
-if [[ $USE_TEST_ROOT_KEYS == 1 ]]; then
-    export ADU_EMBED_TEST_ROOT_KEYS="1"
-fi
 
 if [ -n "${ADU_SRC_URI}" ]; then
     export ADU_SRC_URI
@@ -246,7 +243,7 @@ export SSTATE_DIR=$BUILD_DIR/sstate-cache
 
 # export TOP_DIR=$ROOT_DIR/yocto
 # We need to tell bitbake about any env vars it should read in.
-export BB_ENV_PASSTHROUGH_ADDITIONS="$BB_ENV_PASSTHROUGH_ADDITIONS ADU_GENERATION ADU_GIT_BRANCH ADU_SRC_URI ADU_GIT_COMMIT DO_GIT_BRANCH DO_SRC_URI DO_GIT_COMMIT ADU_DELTA_GIT_BRANCH ADU_DELTA_SRC_URI ADU_DELTA_GIT_COMMIT BUILD_TYPE ADU_SOFTWARE_VERSION ADUC_PRIVATE_KEY ADUC_PRIVATE_KEY_PASSWORD SSTATE_DIR"
+export BB_ENV_PASSTHROUGH_ADDITIONS="$BB_ENV_PASSTHROUGH_ADDITIONS ADU_EMBED_TEST_ROOT_KEYS ADU_GENERATION ADU_GIT_BRANCH ADU_SRC_URI ADU_GIT_COMMIT DO_GIT_BRANCH DO_SRC_URI DO_GIT_COMMIT ADU_DELTA_GIT_BRANCH ADU_DELTA_SRC_URI ADU_DELTA_GIT_COMMIT BUILD_TYPE ADU_SOFTWARE_VERSION ADUC_PRIVATE_KEY ADUC_PRIVATE_KEY_PASSWORD SSTATE_DIR"
 source $ROOT_DIR/poky/oe-init-build-env $BUILD_DIR
 
 if [[ $CLEAN_FETCH_RECIPE != '' ]]; then
