@@ -5,6 +5,10 @@ parameters:
   default: scarthgap
   values:
     - scarthgap
+- name: adu_generation
+  displayName: "ADU Generation"
+  type: string
+  default: "1"
 - name: adu_src_uri
   displayName: "ADU Source URI"
   type: string
@@ -53,43 +57,17 @@ steps:
       fi
     displayName: "Ensuring build directory exists"
 
-  - bash: git clone --depth 1 --branch $(yocto_release) git://git.yoctoproject.org/poky
-    displayName: "Clone poky"
-    workingDirectory: "$(Build.SourcesDirectory)/yocto"
-
-  - bash: git clone --depth 1 --branch $(yocto_release)  https://github.com/sbabic/meta-swupdate
-    displayName: "Clone meta-swupdate"
-    workingDirectory: "$(Build.SourcesDirectory)/yocto"
-
-  - bash: git clone --depth 1 --branch $(yocto_release)  git://git.openembedded.org/meta-openembedded
-    displayName: "Clone meta-openembedded"
-    workingDirectory: "$(Build.SourcesDirectory)/yocto"
-
-  - bash: git clone --depth 1 --branch $(yocto_release)  git://git.yoctoproject.org/meta-raspberrypi
-    displayName: "Clone meta-raspberrypi"
-    workingDirectory: "$(Build.SourcesDirectory)/yocto"
-
-  - bash: git clone --depth 1 --branch $(yocto_release)  https://github.com/azure/meta-azure-device-update
-    displayName: "Clone meta-azure-device-update"
-    workingDirectory: "$(Build.SourcesDirectory)/yocto"
-
-  - bash: git clone --depth 1 --branch $(yocto_release)  https://github.com/azure/meta-iot-hub-device-update-delta
-    displayName: "Clone meta-iot-hub-device-update-delta"
-    workingDirectory: "$(Build.SourcesDirectory)/yocto"
-
-  - bash: git clone --depth 1 --branch $(yocto_release)  https://github.com/azure/meta-raspberrypi-adu
-    displayName: "Clone meta-raspberrypi-adu"
-    workingDirectory: "$(Build.SourcesDirectory)/yocto"
-
-  - bash: |
-      sudo apt-get update
-    displayName: Update apt package repositories
-    workingDirectory: "$(Build.SourcesDirectory)"
-    failOnStderr: true
   - bash: |
       echo 'debconf debconf/frontend select Noninteractive' | sudo debconf-set-selections
       ./scripts/install-deps.sh
     displayName: Install dependencies for Yocto Build
+    workingDirectory: "$(Build.SourcesDirectory)"
+    failOnStderr: true
+
+  - bash: |
+      echo 'debconf debconf/frontend select Noninteractive' | sudo debconf-set-selections
+      ./scripts/setup.sh
+    displayName: Clone yocto and meta layers
     workingDirectory: "$(Build.SourcesDirectory)"
     failOnStderr: true
     
@@ -98,7 +76,7 @@ steps:
     inputs:
       targetType: "filePath"
       filePath: "./scripts/build.sh"
-      arguments: '-c -t MinSizeRel -v $(Build.BuildNumber) --adu-src-uri $(adu_src_uri) --adu-git-branch $(adu_git_branch) --adu-git-commit $(adu_git_commit) --do-src-uri $(do_src_uri) --do-git-branch $(do_git_branch)  --do-git-commit $(do_git_commit) --adu-delta-src-uri $(adu_delta_src_uri) --adu-delta-git-branch $(adu_delta_git_branch) --adu-delta-git-commit $(adu_delta_git_commit) -o $(build_workspace_dir)'
+      arguments: '-c -t MinSizeRel -v $(Build.BuildNumber) --adu-generation $(adu_generation) --adu-src-uri $(adu_src_uri) --adu-git-branch $(adu_git_branch) --adu-git-commit $(adu_git_commit) --do-src-uri $(do_src_uri) --do-git-branch $(do_git_branch) --do-git-commit $(do_git_commit) --adu-delta-src-uri $(adu_delta_src_uri) --adu-delta-git-branch $(adu_delta_git_branch) --adu-delta-git-commit $(adu_delta_git_commit) -o $(build_workspace_dir)'
       workingDirectory: $(Build.SourcesDirectory)
 
   # Copy artifacts to a staging directory for publishing.
