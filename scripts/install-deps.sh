@@ -67,12 +67,12 @@ UBUNTU_VERSION=$(get_ubuntu_version)
 # Check the version and install the appropriate package
 if [ "$UBUNTU_VERSION" == "20.04" ]; then
     echo "Detected Ubuntu 20.04. Installing pylint3..."
-    sudo apt update
-    sudo apt install -y pylint3
+    sudo apt-get update
+    sudo apt-get install -y pylint3
 elif [ "$UBUNTU_VERSION" == "22.04" ]; then
     echo "Detected Ubuntu 22.04. Installing pylint..."
-    sudo apt update
-    sudo apt install -y pylint
+    sudo apt-get update
+    sudo apt-get install -y pylint
 else
     echo "Unsupported Ubuntu version: $UBUNTU_VERSION"
     exit 1
