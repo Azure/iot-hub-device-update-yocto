@@ -3,7 +3,7 @@ resources:
   pipelines:
     # Queue this pipeline whenever the ADU private-preview repo is changed.
     - pipeline: azure_adu_private_preview
-      source: Azure.iot-hub-device-update
+      source: Azure.iot-hub-device-update-yocto
       trigger:
         branches:
           include:
