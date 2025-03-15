@@ -4,7 +4,6 @@ resources:
     # Queue this pipeline whenever the ADU Gen 1 GitHub repro is updated
     - pipeline: azure_adu_private_preview
       source: Azure.iot-hub-device-update-yocto
-      timeoutInMinutes: 1200
       trigger:
         branches:
           include:
@@ -13,6 +12,7 @@ resources:
 jobs:
 - job: Build
   displayName: "Build Yocto Image"
+  timeoutInMinutes: 1200
   steps: 
     - bash: |
         echo 'debconf debconf/frontend select Noninteractive' | sudo debconf-set-selections
