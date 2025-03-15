@@ -1,7 +1,7 @@
 resources:
   # Specify the pipelines that should cause this pipeline to be queued.
   pipelines:
-    # Queue this pipeline whenever the ADU private-preview repo is changed.
+    # Queue this pipeline whenever the ADU Gen 1 GitHub repro is updated
     - pipeline: azure_adu_private_preview
       source: Azure.iot-hub-device-update-yocto
       trigger:
@@ -20,36 +20,64 @@ jobs:
       workingDirectory: "$(Build.SourcesDirectory)"
       failOnStderr: true
 
-    - bash: git clone --depth 1 --branch $(yocto_release) git://git.yoctoproject.org/poky
-      displayName: "Clone poky ${yocto_release}"
+    - bash: |
+        echo Cloning poky, branch $(yocto_release)
+        echo Cloning meta-raspberrypi, branch $(yocto_release)
+        echo Cloning meta-azure-device-update, branch $(yocto_release)
+        git clone --depth 1 --branch $(yocto_release) git://git.yoctoproject.org/poky
+      displayName: "Clone poky $(yocto_release)"
       workingDirectory: "$(Build.SourcesDirectory)/yocto"
 
-    - bash: git clone --depth 1 --branch $(yocto_release)  https://github.com/sbabic/meta-swupdate
+    - bash: |
+        echo Cloning meta-swupdate, branch $(yocto_release)
+        git clone --depth 1 --branch $(yocto_release)  https://github.com/sbabic/meta-swupdate
+        git -C meta-swupdate rev-parse --abbrev-ref HEAD
+        git -C meta-swupdate rev-parse HEAD
       displayName: "Clone meta-swupdate"
       workingDirectory: "$(Build.SourcesDirectory)/yocto"
 
-    - bash: git clone --depth 1 --branch $(yocto_release)  git://git.openembedded.org/meta-openembedded
+    - bash: |
+        echo Cloning meta-openembedded, branch $(yocto_release)
+        git clone --depth 1 --branch $(yocto_release)  git://git.openembedded.org/meta-openembedded
+        git -C meta-openembedded rev-parse --abbrev-ref HEAD
+        git -C meta-openembedded rev-parse HEAD
       displayName: "Clone meta-openembedded"
       workingDirectory: "$(Build.SourcesDirectory)/yocto"
 
-    - bash: git clone --depth 1 --branch $(yocto_release)  git://git.yoctoproject.org/meta-raspberrypi
+    - bash: |
+        echo Cloning meta-raspberrypi, branch $(yocto_release)
+        git clone --depth 1 --branch $(yocto_release)  git://git.yoctoproject.org/meta-raspberrypi
+        git -C meta-raspberrypi rev-parse --abbrev-ref HEAD
+        git -C meta-raspberrypi rev-parse HEAD
       displayName: "Clone meta-raspberrypi"
       workingDirectory: "$(Build.SourcesDirectory)/yocto"
 
-    - bash: git clone --depth 1 --branch $(yocto_release)  https://github.com/azure/meta-azure-device-update
+    - bash: |
+        echo Cloning meta-azure-device-update, branch $(yocto_release)
+        git clone --depth 1 --branch $(yocto_release)  https://github.com/azure/meta-azure-device-update
+        git -C meta-azure-device-update rev-parse --abbrev-ref HEAD
+        git -C meta-azure-device-update rev-parse HEAD
       displayName: "Clone meta-azure-device-update"
       workingDirectory: "$(Build.SourcesDirectory)/yocto"
 
-    - bash: git clone --depth 1 --branch $(yocto_release)  https://github.com/azure/meta-iot-hub-device-update-delta
+    - bash: |
+        echo Cloning meta-azure-device-update-delta, branch $(yocto_release)
+        git clone --depth 1 --branch $(yocto_release)  https://github.com/azure/meta-iot-hub-device-update-delta
+        git -C meta-iot-hub-device-update-delta rev-parse --abbrev-ref HEAD
+        git -C meta-iot-hub-device-update-delta rev-parse HEAD
       displayName: "Clone meta-iot-hub-device-update-delta"
       workingDirectory: "$(Build.SourcesDirectory)/yocto"
 
-    - bash: git clone --depth 1 --branch $(yocto_release)  https://github.com/azure/meta-raspberrypi-adu
+    - bash: |
+        echo Cloning meta-raspberrypi-adu, branch $(yocto_release)
+        git clone --depth 1 --branch $(yocto_release)  https://github.com/azure/meta-raspberrypi-adu
+        git -C meta-raspberrypi-adu rev-parse --abbrev-ref HEAD
+        git -C meta-raspberrypi-adu rev-parse HEAD
       displayName: "Clone meta-raspberrypi-adu"
       workingDirectory: "$(Build.SourcesDirectory)/yocto"
       
     - task: Bash@3
-      displayName: "Run Yocto build"
+      displayName: "Yocto build - $(Build.BuildNumber), Gen $(adu_generation) | ADU $(adu_git_branch) : $(adu_git_commit) | DO $(do_git_branch) : $(do_git_commit) | ADU Delta $(adu_delta_git_branch) : $(adu_delta_git_commit)"
       inputs:
         targetType: "filePath"
         filePath: "./scripts/build.sh"
