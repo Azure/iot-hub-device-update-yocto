@@ -4,6 +4,7 @@ resources:
     # Queue this pipeline whenever the ADU Gen 1 GitHub repro is updated
     - pipeline: azure_adu_private_preview
       source: Azure.iot-hub-device-update-yocto
+      timeoutInMinutes: 1200
       trigger:
         branches:
           include:
