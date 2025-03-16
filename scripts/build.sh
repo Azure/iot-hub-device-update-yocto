@@ -198,9 +198,18 @@ if [ -n "${ADU_GIT_BRANCH}" ]; then
     export ADU_GIT_BRANCH
 fi
 
+# if ADU_GIT_COMMIT is not set and not equal "AUTOREV", then use the latest commit
+if [ "${ADU_GIT_COMMIT}" = "AUTOREV" ]; then
+    echo "ADU_GIT_COMMIT is set to AUTOREV, using latest commit."
+    export ADU_GIT_COMMIT=""
+elif [ -z "${ADU_GIT_COMMIT}" ]; then
+    export ADU_GIT_COMMIT
+fi
+
 if [ -n "${ADU_GIT_COMMIT}" ]; then
     export ADU_GIT_COMMIT
 fi
+
 
 if [ -n "${DO_SRC_URI}" ]; then
     export DO_SRC_URI

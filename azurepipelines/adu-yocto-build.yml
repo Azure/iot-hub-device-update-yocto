@@ -45,7 +45,7 @@ parameters:
 - name: adu_git_commit
   displayName: ADU Git commit 
   type: string
-  default: AUTOREV
+  default: a5ff0b07363075c14c9d5cad56a657785c7bb5f2
 
 - name: do_src_uri
   displayName: Delivery Optimization URI
