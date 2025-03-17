@@ -7,6 +7,15 @@ parameters:
   displayName: "ADU Generation"
   type: string
   default: "1"
+- name: adu_embed_test_root_keys
+  displayName: "Embed Test Root Keys"
+  type: boolean
+  default: false
+  values:
+    - true
+    - false
+  type: string
+  default: "1"
 - name: adu_src_uri
   displayName: "ADU Source URI"
   type: string
