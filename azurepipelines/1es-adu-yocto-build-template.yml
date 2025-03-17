@@ -131,15 +131,15 @@ steps:
     displayName: "Stage build artifacts"
     failOnStderr: true
 
-  - task: PublishBuildArtifacts@1
-    displayName: "Publish images"
-    inputs:
-      ArtifactName: images
-      PathtoPublish: "$(Build.ArtifactStagingDirectory)/images"
+  # - task: PublishBuildArtifacts@1
+  #   displayName: "Publish images"
+  #   inputs:
+  #     ArtifactName: images
+  #     PathtoPublish: "$(Build.ArtifactStagingDirectory)/images"
 
-  - task: PublishBuildArtifacts@1
-    displayName: "Publish binaries"
-    inputs:
-      ArtifactName: binaries
-      PathtoPublish: "$(Build.ArtifactStagingDirectory)/bin"
+  # - task: PublishBuildArtifacts@1
+  #   displayName: "Publish binaries"
+  #   inputs:
+  #     ArtifactName: binaries
+  #     PathtoPublish: "$(Build.ArtifactStagingDirectory)/bin"
 
