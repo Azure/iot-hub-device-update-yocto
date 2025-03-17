@@ -11,11 +11,6 @@ parameters:
   displayName: "Embed Test Root Keys"
   type: boolean
   default: false
-  values:
-    - true
-    - false
-  type: string
-  default: "1"
 - name: adu_src_uri
   displayName: "ADU Source URI"
   type: string
