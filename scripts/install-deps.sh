@@ -1,4 +1,12 @@
 #!/bin/bash
+
+# If both /etc/apt/sources.list.d/azure-cli.list and /etc/apt/sources.list.d/azure-cli.sources exist, delete azure-cli.list
+if [ -f /etc/apt/sources.list.d/azure-cli.list ] && [ -f /etc/apt/sources.list.d/azure-cli.sources ]; then
+    echo "Both /etc/apt/sources.list.d/azure-cli.list and /etc/apt/sources.list.d/azure-cli.sources exist." 
+    echo "Deleting /etc/apt/sources.list.d/azure-cli.list"
+    sudo rm -f /etc/apt/sources.list.d/azure-cli.list
+fi
+
 sudo apt-get update
 
 # FIT Dependencies: autoconf autopoint git-lfs zlib1g-dev
