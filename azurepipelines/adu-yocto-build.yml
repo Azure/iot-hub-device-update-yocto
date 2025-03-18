@@ -62,7 +62,7 @@ parameters:
 - name: do_git_commit
   displayName: Delivery Optimization Git commit 
   type: string
-  default: 0acf199d6036feba60c3ea4b5b90bf36978f65f6
+  default: b61de2d347c8032562056b18f90ec710e531baf8
 
 - name: adu_delta_src_uri
   displayName: Device Update Delta Diff URI
