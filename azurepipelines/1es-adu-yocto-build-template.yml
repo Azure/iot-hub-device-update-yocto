@@ -51,6 +51,10 @@ parameters:
   displayName: "Directory for the build workspace"
   type: string
   default: "$(Pipeline.Workspace)/build/"
+- name: adu_key_dir
+  displayName: "Directory for the ADU keys"
+  type: string
+  default: "$(Pipeline.Workspace)/adu-keys
 
 steps: 
   - bash: |
@@ -121,7 +125,7 @@ steps:
     inputs:
       targetType: "filePath"
       filePath: "./scripts/build.sh"
-      arguments: '-c -t MinSizeRel -v $(Build.BuildNumber) --adu-generation $(adu_generation) --adu-src-uri $(adu_src_uri) --adu-git-branch $(adu_git_branch) --adu-git-commit $(adu_git_commit) --do-src-uri $(do_src_uri) --do-git-branch $(do_git_branch) --do-git-commit $(do_git_commit) --adu-delta-src-uri $(adu_delta_src_uri) --adu-delta-git-branch $(adu_delta_git_branch) --adu-delta-git-commit $(adu_delta_git_commit) -o $(Build.BinariesDirectory)'
+      arguments: '-c -t MinSizeRel -v $(Build.BuildNumber) --adu-generation $(adu_generation) --adu-src-uri $(adu_src_uri) --adu-git-branch $(adu_git_branch) --adu-git-commit $(adu_git_commit) --do-src-uri $(do_src_uri) --do-git-branch $(do_git_branch) --do-git-commit $(do_git_commit) --adu-delta-src-uri $(adu_delta_src_uri) --adu-delta-git-branch $(adu_delta_git_branch) --adu-delta-git-commit $(adu_delta_git_commit) --adu-key-dir $(adu_key_dir) -o $(Build.BinariesDirectory)'
       workingDirectory: $(Build.SourcesDirectory)
 
   # Copy artifacts to a staging directory for publishing.
