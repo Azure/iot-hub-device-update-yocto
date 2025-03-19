@@ -62,13 +62,13 @@ steps:
       workingDirectory: "$(Build.SourcesDirectory)"
       targetType: inline
       script: |
-        echo "Downloading test keys to $(Build.SourcesDirectory)/adu_keys"
+        echo "Downloading test keys to $(Build.SourcesDirectory)/keys"
         az login --identity
         az storage blob download --auth-mode login --account-name aduetestsetupstorage --container-name yocto-test-images --name yocto_keys.tar.gz --file /tmp/yocto_keys.tar.gz
-        mkdir -p $(Build.SourcesDirectory)/adu_keys
-        tar -xf /tmp/yocto_keys.tar.gz -C $(Build.SourcesDirectory)/adu_keys
+        mkdir -p $(Build.SourcesDirectory)/keys
+        tar -xf /tmp/yocto_keys.tar.gz -C $(Build.SourcesDirectory)/keys
         echo "Download completed"
-        ls -l $(Build.SourcesDirectory)/adu_keys
+        ls -l $(Build.SourcesDirectory)/keys
 
       failOnStandardError: true
     name: DownloadTestKey2
@@ -140,7 +140,7 @@ steps:
     inputs:
       targetType: "filePath"
       filePath: "./scripts/build.sh"
-      arguments: '-c -t MinSizeRel -v $(Build.BuildNumber) --adu-generation $(adu_generation) --adu-use-test-root-keys $(adu_use_test_root_keys) --adu-src-uri $(adu_src_uri) --adu-git-branch $(adu_git_branch) --adu-git-commit $(adu_git_commit) --do-src-uri $(do_src_uri) --do-git-branch $(do_git_branch) --do-git-commit $(do_git_commit) --adu-delta-src-uri $(adu_delta_src_uri) --adu-delta-git-branch $(adu_delta_git_branch) --adu-delta-git-commit $(adu_delta_git_commit) --adu-key-dir /mnt/vss/_work/1/s/adu_keys -o $(Build.BinariesDirectory)'
+      arguments: '-c -t MinSizeRel -v $(Build.BuildNumber) --adu-generation $(adu_generation) --adu-use-test-root-keys $(adu_use_test_root_keys) --adu-src-uri $(adu_src_uri) --adu-git-branch $(adu_git_branch) --adu-git-commit $(adu_git_commit) --do-src-uri $(do_src_uri) --do-git-branch $(do_git_branch) --do-git-commit $(do_git_commit) --adu-delta-src-uri $(adu_delta_src_uri) --adu-delta-git-branch $(adu_delta_git_branch) --adu-delta-git-commit $(adu_delta_git_commit) --adu-key-dir $(Build.SourcesDirectory)/keys -o $(Build.BinariesDirectory)'
       workingDirectory: $(Build.SourcesDirectory)
 
   # Copy artifacts to a staging directory for publishing.
