@@ -250,6 +250,17 @@ fi
 if [ -z "${ADUC_KEY_DIR}" ]; then
     echo "ADUC_KEY_DIR not set. Using default directory."
     ADUC_KEY_DIR=$(realpath $SCRIPT_DIR/../keys)
+else
+    echo "ADUC_KEY_DIR set to $ADUC_KEY_DIR"
+fi
+
+# Check if ADUC_KEY_DIR exists, if not, exit.
+if [ ! -d "$ADUC_KEY_DIR" ]; then
+    echo "ADUC_KEY_DIR does not exist: $ADUC_KEY_DIR"
+    exit 1
+else
+    echo "ADU_KEY_DIR contains:"
+    ls -l $ADUC_KEY_DIR
 fi
 
 # By convension, if public.pem exists in the ADUC_KEY_DIR, then use it.
