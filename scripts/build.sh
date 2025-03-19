@@ -36,6 +36,15 @@ Usage: build.sh [options...]
     --clean-fetch-recipe <recipe>    Does bitbake -c cleanall <recipe>; bitbake -c fetch <recipe> -v
                                      e.g. --clean-fetch-recipe azure-device-update
 
+    --clean-sstate <recipe>          Cleans the SState Cache for the given recipe.
+                                     Clean just ADU:
+                                         ./scripts/build.sh --clean-sstate azure-device-update
+                                     e.g. To also clean delta update sstate cache entries use:
+                                         ./scripts/build.sh --clean-sstate azure-device-update azure-device-update-diffs
+
+    --show-recipes                   Runs bitbake-layers show-recipes.
+                                     e.g. script.sh --show-recipes | grep -i azure
+
     -o, --out-dir <build_dir>        Set the build output directory. Default is build.
     --verbose                        Add -v to bitbake cmdline for verbose output.
 
@@ -80,6 +89,8 @@ ADU_GEN=1
 VERBOSE=''
 SET_ENV_ONLY=0
 ADU_EMBED_TEST_ROOT_KEYS=0
+CLEAN_SSTATE_RECIPE_NAME=''
+SHOW_RECIPES=0
 
 while [[ $1 != "" ]]; do
     case $1 in
@@ -141,6 +152,13 @@ while [[ $1 != "" ]]; do
         shift
         CLEAN_FETCH_RECIPE="$1"
         echo "debugging fetch of recipe '${FETCH_RECIPE}' ..."
+        ;;
+    --clean-sstate)
+        shift
+        CLEAN_SSTATE_RECIPE_NAME="$1"
+        ;;
+    --show-recipes)
+        SHOW_RECIPES=1
         ;;
     --adu-generation)
         shift
@@ -246,7 +264,12 @@ export SSTATE_DIR=$BUILD_DIR/sstate-cache
 export BB_ENV_PASSTHROUGH_ADDITIONS="$BB_ENV_PASSTHROUGH_ADDITIONS ADU_EMBED_TEST_ROOT_KEYS ADU_GENERATION ADU_GIT_BRANCH ADU_SRC_URI ADU_GIT_COMMIT DO_GIT_BRANCH DO_SRC_URI DO_GIT_COMMIT ADU_DELTA_GIT_BRANCH ADU_DELTA_SRC_URI ADU_DELTA_GIT_COMMIT BUILD_TYPE ADU_SOFTWARE_VERSION ADUC_PRIVATE_KEY ADUC_PRIVATE_KEY_PASSWORD SSTATE_DIR"
 source $ROOT_DIR/poky/oe-init-build-env $BUILD_DIR
 
-if [[ $CLEAN_FETCH_RECIPE != '' ]]; then
+if [[ $SHOW_RECIPES == 1 ]]; then
+    bitbake-layers show-recipes
+elif [[ $CLEAN_SSTATE_RECIPE_NAME != '' ]]; then
+    echo -e "\nCleaning SSTATE Cache for Recipe '$CLEAN_SSTATE_RECIPE_NAME' ..."
+    bitbake -c cleansstate "$CLEAN_SSTATE_RECIPE_NAME"
+elif [[ $CLEAN_FETCH_RECIPE != '' ]]; then
     bitbake $VERBOSE -c cleanall "$CLEAN_FETCH_RECIPE"
     bitbake $VERBOSE -c fetch "$CLEAN_FETCH_RECIPE"
 elif [[ $BUILD_CORE_IMAGE_ONLY == 1 ]]; then
