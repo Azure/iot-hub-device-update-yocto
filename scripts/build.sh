@@ -185,6 +185,7 @@ while [[ $1 != "" ]]; do
         VERBOSE='-v'
         ;;
     *)
+        echo "Unknown option: $1" >&2
         print_help
         exit 1
         ;;
