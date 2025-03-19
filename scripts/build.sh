@@ -14,7 +14,7 @@ Usage: build.sh [options...]
 
     --adu-generation                 The device update agent. Options are 1 and 2. Default is 1.
     --adu-key-dir <dir>              Set the directory where the ADU keys are stored. Default is \$SCRIPT_DIR/../keys.
-    --use-test-root-keys             Use test root keys instead of prod root keys and enable e2e testing.
+    --adu-use-test-root-keys         Use test root keys instead of prod root keys and enable e2e testing.
     
     --adu-git-branch <branch>        Set the ADU Client (ADUC) branch to build. Default is 'develop'.
     --adu-src-uri <uri>              Set the URI for the ADUC repo.
@@ -27,8 +27,6 @@ Usage: build.sh [options...]
     --adu-delta-git-branch <branch>  Set the ADU Delta branch to build. Default is main.
     --adu-delta-src-uri <uri>        Set the URI for the ADU Delta (FIT) repo.
     --adu-delta-git-commit <hash>    Set the commit hash for the ADU Delta repo.
-
-    --use-test-root-keys             Uses test root keys instead of prod root keys and enables e2e testing.
 
     -v, --version <sw_version>       Set the software version of this build that is baked into the image.
 
@@ -102,7 +100,7 @@ while [[ $1 != "" ]]; do
         shift
         ADU_GIT_COMMIT=$1
         ;;
-    --use-test-root-keys)
+    --adu-use-test-root-keys)
         ADU_EMBED_TEST_ROOT_KEYS=1
         echo -e '*** Using TEST Root Keys! ***\n'
         ;;
@@ -157,8 +155,8 @@ while [[ $1 != "" ]]; do
             exit 1
         fi
         ;;
-    --use-test-root-keys)
-        ADUC_USE_TEST_ROOT_KEYS=1
+    --adu-use-test-root-keys)
+        ADU_USE_TEST_ROOT_KEYS=1
         echo -e '*** Using TEST Root Keys! ***\n'
         ;;
     --set-env-only)
@@ -196,7 +194,7 @@ done
 
 export MACHINE='raspberrypi4-64'
 export ADU_GENERATION="$ADU_GEN"
-export ADUC_USE_TEST_ROOT_KEYS="$ADUC_USE_TEST_ROOT_KEYS"
+export ADUC_USE_TEST_ROOT_KEYS="$ADU_USE_TEST_ROOT_KEYS"
 
 
 # Need to work on what this is
