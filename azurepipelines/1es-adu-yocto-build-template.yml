@@ -56,6 +56,22 @@ parameters:
   type: string
 
 steps: 
+  - task: Bash@3
+            displayName: "Download Test Key for ADU"
+            inputs:
+              workingDirectory: "$(Build.SourcesDirectory)"
+              targetType: inline
+              script: |
+                echo "Downloading test keys to $(Build.SourcesDirectory)/adu_keys"
+                az login --identity
+                az storage blob download --auth-mode login --account-name aduetestsetupstorage --container-name yocto-test-images --name yocto_keys.tar.gz --file /tmp/yocto_keys.tar.gz
+                mkdir -p $(Build.SourcesDirectory)/adu_keys
+                tar -xf /tmp/yocto_keys.tar.gz -C $(Build.SourcesDirectory)/adu_keys
+                echo "Download completed"
+                ls -l $(Build.SourcesDirectory)/adu_keys
+
+              failOnStandardError: true
+            name: DownloadTestKey2
   - bash: |
       echo 'debconf debconf/frontend select Noninteractive' | sudo debconf-set-selections
       ./scripts/install-deps.sh
