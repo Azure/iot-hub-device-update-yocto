@@ -13,7 +13,9 @@ Usage: build.sh [options...]
     --rebuild                        Execute a full rebuild
 
     --adu-generation                 The device update agent. Options are 1 and 2. Default is 1.
-
+    --adu-key-dir <dir>              Set the directory where the ADU keys are stored. Default is \$SCRIPT_DIR/../keys.
+    --use-test-root-keys             Use test root keys instead of prod root keys and enable e2e testing.
+    
     --adu-git-branch <branch>        Set the ADU Client (ADUC) branch to build. Default is 'develop'.
     --adu-src-uri <uri>              Set the URI for the ADUC repo.
     --adu-git-commit <commit hash>   Set the commit hash for the ADUC repo.
@@ -79,7 +81,8 @@ CLEAN_FETCH_RECIPE=''
 ADU_GEN=1
 VERBOSE=''
 SET_ENV_ONLY=0
-ADU_EMBED_TEST_ROOT_KEYS=0
+ADUC_KEY_DIR=''
+ADUC_PUBLIC_KEY=''
 
 while [[ $1 != "" ]]; do
     case $1 in
@@ -142,6 +145,10 @@ while [[ $1 != "" ]]; do
         CLEAN_FETCH_RECIPE="$1"
         echo "debugging fetch of recipe '${FETCH_RECIPE}' ..."
         ;;
+    --adu-key-dir)
+        shift
+        ADUC_KEY_DIR=$1
+        ;;
     --adu-generation)
         shift
         ADU_GEN="$1"
@@ -149,6 +156,10 @@ while [[ $1 != "" ]]; do
             echo "Invalid --adu-generation value: $ADU_GEN" >&2
             exit 1
         fi
+        ;;
+    --use-test-root-keys)
+        ADUC_USE_TEST_ROOT_KEYS=1
+        echo -e '*** Using TEST Root Keys! ***\n'
         ;;
     --set-env-only)
         SET_ENV_ONLY=1
@@ -185,7 +196,8 @@ done
 
 export MACHINE='raspberrypi4-64'
 export ADU_GENERATION="$ADU_GEN"
-export ADU_EMBED_TEST_ROOT_KEYS
+export ADUC_USE_TEST_ROOT_KEYS="$ADUC_USE_TEST_ROOT_KEYS"
+
 
 # Need to work on what this is
 export TEMPLATECONF=$ROOT_DIR/meta-raspberrypi-adu/conf/templates/$MACHINE/
@@ -209,7 +221,6 @@ fi
 if [ -n "${ADU_GIT_COMMIT}" ]; then
     export ADU_GIT_COMMIT
 fi
-
 
 if [ -n "${DO_SRC_URI}" ]; then
     export DO_SRC_URI
@@ -239,9 +250,33 @@ if [ -n "${VERSION}" ]; then
     export ADU_SOFTWARE_VERSION=$VERSION
 fi
 
-ADUC_KEY_DIR=$(realpath $SCRIPT_DIR/../keys)
-export ADUC_PRIVATE_KEY=$ADUC_KEY_DIR/priv.pem
-export ADUC_PRIVATE_KEY_PASSWORD=$ADUC_KEY_DIR/priv.pass
+# Set ADUC_KEY_DIR to the directory where the keys are stored, if not set.
+if [ -z "${ADUC_KEY_DIR}" ]; then
+    echo "ADUC_KEY_DIR not set. Using default directory."
+    ADUC_KEY_DIR=$(realpath $SCRIPT_DIR/../keys)
+fi
+
+# By convension, if public.pem exists in the ADUC_KEY_DIR, then use it.
+# This is to avoid using the private key for signing.
+if [ -f "$ADUC_KEY_DIR/public.pem" ]; then
+    echo "Using public key from $ADUC_KEY_DIR"
+    export ADUC_PUBLIC_KEY=$ADUC_KEY_DIR/public.pem
+else
+    echo "Public key not found in $ADUC_KEY_DIR. Using private key instead."
+fi
+
+# Check if ADUC_PUBLIC_KEY is set and exists, if not, make sure that private key is set.
+if [ -z "$ADUC_PUBLIC_KEY" ] || [ ! -f "$ADUC_PUBLIC_KEY" ]; then
+    export ADUC_PUBLIC_KEY=''
+    export ADUC_PRIVATE_KEY=$ADUC_KEY_DIR/priv.pem
+    export ADUC_PRIVATE_KEY_PASSWORD=$ADUC_KEY_DIR/priv.pass
+
+    if (( [ -z "$ADUC_PRIVATE_KEY" ] || [ ! -f "$ADUC_PRIVATE_KEY" ] ) || \
+        ( [ -z "$ADUC_PRIVATE_KEY_PASSWORD" ] || [ ! -f "$ADUC_PRIVATE_KEY_PASSWORD" ] ) ); then
+        echo "ADUC_PRIVATE_KEY or ADUC_PRIVATE_KEY_PASSWORD not set or not found."
+        exit 1
+    fi
+fi
 
 # Remove all build output files for a full rebuild.
 if [[ $REBUILD == 'true' ]]; then
@@ -252,7 +287,7 @@ export SSTATE_DIR=$BUILD_DIR/sstate-cache
 
 # export TOP_DIR=$ROOT_DIR/yocto
 # We need to tell bitbake about any env vars it should read in.
-export BB_ENV_PASSTHROUGH_ADDITIONS="$BB_ENV_PASSTHROUGH_ADDITIONS ADU_EMBED_TEST_ROOT_KEYS ADU_GENERATION ADU_GIT_BRANCH ADU_SRC_URI ADU_GIT_COMMIT DO_GIT_BRANCH DO_SRC_URI DO_GIT_COMMIT ADU_DELTA_GIT_BRANCH ADU_DELTA_SRC_URI ADU_DELTA_GIT_COMMIT BUILD_TYPE ADU_SOFTWARE_VERSION ADUC_PRIVATE_KEY ADUC_PRIVATE_KEY_PASSWORD SSTATE_DIR"
+export BB_ENV_PASSTHROUGH_ADDITIONS="$BB_ENV_PASSTHROUGH_ADDITIONS ADUC_USE_TEST_ROOT_KEYS ADU_GENERATION ADU_GIT_BRANCH ADU_SRC_URI ADU_GIT_COMMIT DO_GIT_BRANCH DO_SRC_URI DO_GIT_COMMIT ADU_DELTA_GIT_BRANCH ADU_DELTA_SRC_URI ADU_DELTA_GIT_COMMIT BUILD_TYPE ADU_SOFTWARE_VERSION ADUC_PUBLIC_KEY ADUC_PRIVATE_KEY ADUC_PRIVATE_KEY_PASSWORD SSTATE_DIR"
 source $ROOT_DIR/poky/oe-init-build-env $BUILD_DIR
 
 if [[ $CLEAN_FETCH_RECIPE != '' ]]; then
