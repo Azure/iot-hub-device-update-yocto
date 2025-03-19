@@ -54,7 +54,7 @@ parameters:
 - name: adu_key_dir
   displayName: "Directory for the ADU keys"
   type: string
-  default: "$(Pipeline.Workspace)/adu-keys
+  default: "$(Pipeline.Workspace)/adu-keys"
 
 steps: 
   - bash: |
