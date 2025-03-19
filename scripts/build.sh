@@ -101,8 +101,9 @@ while [[ $1 != "" ]]; do
         ADU_GIT_COMMIT=$1
         ;;
     --adu-use-test-root-keys)
-        ADU_EMBED_TEST_ROOT_KEYS=1
-        echo -e '*** Using TEST Root Keys! ***\n'
+        shift
+        ADU_USE_TEST_ROOT_KEYS=$1
+        echo -e "ADU_EMBED_TEST_ROOT_KEYS:$ADU_USE_TEST_ROOT_KEYS"
         ;;
     --do-git-branch)
         shift
@@ -154,10 +155,6 @@ while [[ $1 != "" ]]; do
             echo "Invalid --adu-generation value: $ADU_GEN" >&2
             exit 1
         fi
-        ;;
-    --adu-use-test-root-keys)
-        ADU_USE_TEST_ROOT_KEYS=1
-        echo -e '*** Using TEST Root Keys! ***\n'
         ;;
     --set-env-only)
         SET_ENV_ONLY=1
