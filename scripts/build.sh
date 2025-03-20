@@ -268,21 +268,20 @@ fi
 if [ -f "$ADUC_KEY_DIR/public.pem" ]; then
     echo "Using public key from $ADUC_KEY_DIR"
     export ADUC_PUBLIC_KEY=$ADUC_KEY_DIR/public.pem
-else
-    echo "Public key not found in $ADUC_KEY_DIR. Using private key instead."
 fi
 
 # Check if ADUC_PUBLIC_KEY is set and exists, if not, make sure that private key is set.
 if [ -z "$ADUC_PUBLIC_KEY" ] || [ ! -f "$ADUC_PUBLIC_KEY" ]; then
     export ADUC_PUBLIC_KEY=''
-    export ADUC_PRIVATE_KEY=$ADUC_KEY_DIR/priv.pem
-    export ADUC_PRIVATE_KEY_PASSWORD=$ADUC_KEY_DIR/priv.pass
+fi
 
-    if (( [ -z "$ADUC_PRIVATE_KEY" ] || [ ! -f "$ADUC_PRIVATE_KEY" ] ) || \
-        ( [ -z "$ADUC_PRIVATE_KEY_PASSWORD" ] || [ ! -f "$ADUC_PRIVATE_KEY_PASSWORD" ] ) ); then
-        echo "ADUC_PRIVATE_KEY or ADUC_PRIVATE_KEY_PASSWORD not set or not found."
-        exit 1
-    fi
+export ADUC_PRIVATE_KEY=$ADUC_KEY_DIR/priv.pem
+export ADUC_PRIVATE_KEY_PASSWORD=$ADUC_KEY_DIR/priv.pass
+
+if (( [ -z "$ADUC_PRIVATE_KEY" ] || [ ! -f "$ADUC_PRIVATE_KEY" ] ) || \
+    ( [ -z "$ADUC_PRIVATE_KEY_PASSWORD" ] || [ ! -f "$ADUC_PRIVATE_KEY_PASSWORD" ] ) ); then
+    echo "ADUC_PRIVATE_KEY or ADUC_PRIVATE_KEY_PASSWORD not set or not found."
+    exit 1
 fi
 
 # Remove all build output files for a full rebuild.
