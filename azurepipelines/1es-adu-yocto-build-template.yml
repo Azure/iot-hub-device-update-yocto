@@ -147,10 +147,10 @@ steps:
   # there's something you can do here to get the outputs to take care of it
   - bash: |
       mkdir -p $(Build.ArtifactStagingDirectory)/images
-      cp $(Build.BinariesDirectory)/build/tmp/deploy/raspberrypi4-64/adu-base-image-raspberrypi4-64-*.wic.gz \
-        $(Build.ArtifactStagingDirectory)/images/adu-base-image-raspberrypi4-64-$(Build.BuildNumber).wic.gz
+      cp $(Build.BinariesDirectory)/build/tmp/deploy/images/raspberrypi4-64/adu-base-image-raspberrypi4-64-*.wic.gz \
+        $(Build.ArtifactStagingDirectory)/images
       cp $(Build.BinariesDirectory)/build/tmp/deploy/images/raspberrypi4-64/adu-update-image-*.swu \
-        $(Build.ArtifactStagingDirectory)/images/adu-update-image-raspberrypi4-64-$(Build.BuildNumber).swu
+        $(Build.ArtifactStagingDirectory)/images
     workingDirectory: $(Build.ArtifactStagingDirectory)
     displayName: "Stage build artifacts"
     failOnStderr: true
