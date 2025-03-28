@@ -1,4 +1,12 @@
 #!/bin/bash
+
+# If both /etc/apt/sources.list.d/azure-cli.list and /etc/apt/sources.list.d/azure-cli.sources exist, delete azure-cli.list
+if [ -f /etc/apt/sources.list.d/azure-cli.list ] && [ -f /etc/apt/sources.list.d/azure-cli.sources ]; then
+    echo "Both /etc/apt/sources.list.d/azure-cli.list and /etc/apt/sources.list.d/azure-cli.sources exist." 
+    echo "Deleting /etc/apt/sources.list.d/azure-cli.list"
+    sudo rm -f /etc/apt/sources.list.d/azure-cli.list
+fi
+
 sudo apt-get update
 
 # FIT Dependencies: autoconf autopoint git-lfs zlib1g-dev
@@ -67,12 +75,12 @@ UBUNTU_VERSION=$(get_ubuntu_version)
 # Check the version and install the appropriate package
 if [ "$UBUNTU_VERSION" == "20.04" ]; then
     echo "Detected Ubuntu 20.04. Installing pylint3..."
-    sudo apt update
-    sudo apt install -y pylint3
+    sudo apt-get update
+    sudo apt-get install -y pylint3
 elif [ "$UBUNTU_VERSION" == "22.04" ]; then
     echo "Detected Ubuntu 22.04. Installing pylint..."
-    sudo apt update
-    sudo apt install -y pylint
+    sudo apt-get update
+    sudo apt-get install -y pylint
 else
     echo "Unsupported Ubuntu version: $UBUNTU_VERSION"
     exit 1
