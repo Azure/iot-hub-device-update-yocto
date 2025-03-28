@@ -159,6 +159,7 @@ while [[ $1 != "" ]]; do
     --adu-key-dir)
         shift
         ADUC_KEY_DIR=$1
+        ;;
     --clean-sstate)
         shift
         CLEAN_SSTATE_RECIPE_NAME="$1"
