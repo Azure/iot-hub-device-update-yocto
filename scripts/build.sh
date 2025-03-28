@@ -14,7 +14,7 @@ Usage: build.sh [options...]
 
     --adu-generation                 The device update agent. Options are 1 and 2. Default is 1.
     --adu-key-dir <dir>              Set the directory where the ADU keys are stored. Default is \$SCRIPT_DIR/../keys.
-    --adu-use-test-root-keys         Use test root keys instead of prod root keys and enable e2e testing.
+    --adu-embed-test-root-keys       Use test root keys instead of production root keys and enable e2e testing.
     
     --adu-git-branch <branch>        Set the ADU Client (ADUC) branch to build. Default is 'develop'.
     --adu-src-uri <uri>              Set the URI for the ADUC repo.
