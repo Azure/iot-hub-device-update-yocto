@@ -100,10 +100,10 @@ while [[ $1 != "" ]]; do
         shift
         ADU_GIT_COMMIT=$1
         ;;
-    --adu-use-test-root-keys)
+    --adu-embed-test-root-keys)
         shift
-        ADU_USE_TEST_ROOT_KEYS=$1
-        echo -e "ADU_EMBED_TEST_ROOT_KEYS:$ADU_USE_TEST_ROOT_KEYS"
+        ADU_EMBED_TEST_ROOT_KEYS =$1
+        echo -e "ADU_EMBED_TEST_ROOT_KEYS:$ADU_EMBED_TEST_ROOT_KEYS "
         ;;
     --do-git-branch)
         shift
@@ -192,7 +192,7 @@ done
 
 export MACHINE='raspberrypi4-64'
 export ADU_GENERATION="$ADU_GEN"
-export ADUC_USE_TEST_ROOT_KEYS="$ADU_USE_TEST_ROOT_KEYS"
+export ADU_EMBED_TEST_ROOT_KEYS ="$ADU_EMBED_TEST_ROOT_KEYS"
 
 
 # Need to work on what this is
