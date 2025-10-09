@@ -211,8 +211,7 @@ done
 
 export MACHINE='raspberrypi4-64'
 export ADU_GENERATION="$ADU_GEN"
-export ADU_EMBED_TEST_ROOT_KEYS ="$ADU_EMBED_TEST_ROOT_KEYS"
-
+export ADU_EMBED_TEST_ROOT_KEYS="$ADU_EMBED_TEST_ROOT_KEYS"
 
 # Need to work on what this is
 export TEMPLATECONF=$ROOT_DIR/meta-raspberrypi-adu/conf/templates/$MACHINE/
