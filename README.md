@@ -78,6 +78,27 @@ pushd ~/adu_yocto/out
 find . -type f -name '*.wic' | grep -i deploy
 ```
 
+### Build and Run Status Monitor for ARM64 using Yocto Toolchain
+
+```sh
+# After building the .wic above
+
+./scripts/build_status_monitor.sh
+file ../sdk_examples/status_monitor
+ls -la ../sdk_examples/status_monitor
+
+# After flashing the RPi4 device with the .wic from above:
+
+# copy to rpi4
+scp ../sdk_examples/user@<IP of rpi4device>:/var/lib/adu/
+
+# run status monitor
+ssh user@<IP of rpi4device>
+rpi4> cd /var/lib/adu
+rpi4> chown adu:adu status_monitor
+rpi4> su -p adu
+rpi4> ./status_monitor
+```
 
 ### Quick Steps - Gen 2
 
