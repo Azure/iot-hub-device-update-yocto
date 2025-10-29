@@ -71,6 +71,13 @@ openssl rsa -in ./priv.pem -passin file:priv.pass -out public.pem -outform PEM -
 popd
 
 # Launch bitbake to build the .wic image as per the yocto recipes.
+#
+# Build with default branches and commits:
+# ./scripts/build.sh -c -t Debug -o ~/adu_yocto/out
+#
+# Optional: Specify ADU Branch and Commit
+# ./scripts/build.sh -c -t Debug -o ~/adu_yocto/out --adu-git-branch release/1.2.0 --adu-git-commit 9cf04c49d49b587712d01e9db6e1870a70959682
+
 ./scripts/build.sh -c -t Debug -o ~/adu_yocto/out
 
 # List the deployment .wic file and symlink to it.
