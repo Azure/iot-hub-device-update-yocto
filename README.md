@@ -391,6 +391,21 @@ syft convert ./adu-base-image-raspberrypi4-64.spdx.tar.zst -o cyclonedx-json
 |---|---|---|
 | Raspberry Pi 4 | scarthgap | [![Build Status](https://dev.azure.com/azure-device-update/adu-linux-client/_apis/build/status/azure.iot-hub-device-update-yocto?branchName=scarthgap)](https://dev.azure.com/azure-device-update/adu-linux-client/_build/latest?definitionId=57&branchName=scarthgap)|
 
+## GitHub Actions Workflows
+
+GitHub Actions workflows are available in `.github/workflows/` for automated builds:
+
+- **`yocto-build.yml`** - Standard builds on GitHub-hosted runners
+- **`yocto-build-incremental.yml`** - Fast incremental builds for PRs
+- **`yocto-build-self-hosted.yml`** - Production builds on self-hosted runners
+
+**Note:** The GitHub Actions workflows automatically generate **test signing keys** for demonstration purposes. For production builds:
+1. Generate secure keys following the instructions in `keys/README.md`
+2. Store them in GitHub Secrets (`ADU_PRIVATE_KEY` and `ADU_KEY_PASSWORD`)
+3. The self-hosted workflow will automatically use your production keys
+
+See `.github/workflows/README.md` for detailed documentation on setup, usage, and configuration.
+
 
 ## Using Your Own Board and Guidance for Production Images
 

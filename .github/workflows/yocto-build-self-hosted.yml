@@ -65,6 +65,28 @@ jobs:
         run: |
           ./scripts/install-deps.sh
       
+      - name: Setup ADU signing keys
+        run: |
+          # For self-hosted runners, check if production keys exist in secrets
+          # Otherwise generate test keys
+          mkdir -p keys
+          
+          if [ -n "${{ secrets.ADU_PRIVATE_KEY }}" ] && [ -n "${{ secrets.ADU_KEY_PASSWORD }}" ]; then
+            echo "Using production keys from GitHub Secrets"
+            echo "${{ secrets.ADU_PRIVATE_KEY }}" > keys/priv.pem
+            echo "${{ secrets.ADU_KEY_PASSWORD }}" > keys/priv.pass
+            openssl rsa -in keys/priv.pem -passin file:keys/priv.pass -out keys/public.pem -outform PEM -pubout
+            echo "✅ Production keys configured"
+          else
+            echo "⚠️  No production keys found in secrets. Generating test keys..."
+            echo "test-self-hosted-password" > keys/priv.pass
+            openssl genrsa -out keys/priv.pem -passout file:keys/priv.pass 2048
+            openssl rsa -in keys/priv.pem -passin file:keys/priv.pass -out keys/public.pem -outform PEM -pubout
+            echo "⚠️  WARNING: Using TEST keys. Configure ADU_PRIVATE_KEY and ADU_KEY_PASSWORD secrets for production."
+          fi
+          
+          ls -l keys/
+      
       - name: Check disk space
         run: |
           df -h

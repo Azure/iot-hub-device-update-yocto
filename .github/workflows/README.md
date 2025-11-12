@@ -276,6 +276,50 @@ Add Slack/Teams notifications:
 
 ## Security Considerations
 
+### ADU Signing Keys
+
+All workflows require signing keys for the swupdate payload. The workflows handle this automatically:
+
+**Test Builds (GitHub-hosted runners):**
+- Automatically generates test keys during workflow run
+- Keys are ephemeral and not persisted
+- **WARNING: These are test keys only - DO NOT use for production images**
+
+**Production Builds (Self-hosted runners):**
+- Checks for GitHub Secrets: `ADU_PRIVATE_KEY` and `ADU_KEY_PASSWORD`
+- Falls back to test key generation if secrets not found
+- Recommended: Configure secrets for production builds
+
+**To configure production keys:**
+
+1. Generate your production keys locally:
+   ```bash
+   cd /secure/location
+   echo "YOUR_SECURE_PASSWORD" > priv.pass
+   openssl genrsa -out priv.pem -passout file:priv.pass 2048
+   ```
+
+2. Add keys to GitHub Secrets:
+   ```bash
+   # Go to: Settings > Secrets and variables > Actions > New repository secret
+   
+   # Secret 1: ADU_PRIVATE_KEY
+   # Value: Contents of priv.pem file
+   
+   # Secret 2: ADU_KEY_PASSWORD  
+   # Value: Contents of priv.pass file (your password)
+   ```
+
+3. The self-hosted workflow will automatically use these secrets
+
+**Important Security Notes:**
+- Never commit `priv.pem` or `priv.pass` to git
+- Store production keys in a secure vault (Azure Key Vault, AWS Secrets Manager, etc.)
+- Rotate keys regularly according to your security policy
+- Use different keys for different environments (dev/staging/prod)
+
+### Additional Security
+
 1. **Secrets Management:**
    - Store signing keys in GitHub Secrets
    - Use environment-specific secrets

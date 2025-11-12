@@ -51,6 +51,19 @@ jobs:
           sudo apt-get update
           ./scripts/install-deps.sh
       
+      - name: Generate ADU signing keys
+        run: |
+          # Generate test keys for signing the swupdate payload
+          # For production builds, use GitHub Secrets instead
+          mkdir -p keys
+          echo "test-github-actions-password" > keys/priv.pass
+          openssl genrsa -out keys/priv.pem -passout file:keys/priv.pass 2048
+          openssl rsa -in keys/priv.pem -passin file:keys/priv.pass -out keys/public.pem -outform PEM -pubout
+          
+          echo "Generated test keys:"
+          ls -l keys/
+          echo "⚠️  WARNING: These are TEST keys only. Do not use in production!"
+      
       - name: Cache Yocto downloads
         uses: actions/cache@v3
         with:
