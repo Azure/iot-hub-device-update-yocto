@@ -73,24 +73,24 @@ popd
 # Launch bitbake to build the .wic image as per the yocto recipes.
 #
 # Build with default branches (automatically fetches latest commit from branch):
-# ./scripts/build.sh -c -t Debug -o ~/adu_yocto/out
+# ./scripts/build.sh -c -t Debug -o ~/yocto_build_dir
 #
 # Build with specific branch (automatically fetches HEAD commit):
-# ./scripts/build.sh -c -t Debug -o ~/adu_yocto/out --adu-git-branch feature/v-next
+# ./scripts/build.sh -c -t Debug -o ~/yocto_build_dir --adu-git-branch feature/v-next
 #
 # Optional: Specify ADU Branch and Commit explicitly
-# ./scripts/build.sh -c -t Debug -o ~/adu_yocto/out --adu-git-branch release/1.2.0 --adu-git-commit 9cf04c49d49b587712d01e9db6e1870a70959682
+# ./scripts/build.sh -c -t Debug -o ~/yocto_build_dir --adu-git-branch release/1.2.0 --adu-git-commit 9cf04c49d49b587712d01e9db6e1870a70959682
 #
 # Use parallel builds for faster compilation (uses all CPU cores by default):
-# ./scripts/build.sh -c -t Debug -o ~/adu_yocto/out -j 8 --parallel-make 8
+# ./scripts/build.sh -c -t Debug -o ~/yocto_build_dir -j 8 --parallel-make 8
 #
 # Full rebuild (preserves sstate cache for faster rebuilds):
-# ./scripts/build.sh --rebuild -t Debug -o ~/adu_yocto/out --adu-git-branch feature/v-next
+# ./scripts/build.sh --rebuild -t Debug -o ~/yocto_build_dir --adu-git-branch feature/v-next
 
-./scripts/build.sh -c -t Debug -o ~/adu_yocto/out
+./scripts/build.sh -c -t Debug -o ~/yocto_build_dir
 
 # List the deployment .wic file and symlink to it.
-pushd ~/adu_yocto/out
+pushd ~/yocto_build_dir
 find . -type f -name '*.wic' | grep -i deploy
 ```
 
@@ -271,12 +271,118 @@ You can use:
 ```
 to see the list of all options for the build.
 
-If successful, the output image file (adu-base-image-raspberrypi4-64.wic.gz) and example .swu update file (adu-update-image.swu) should be located in `$build_output_dir/tmp/deploy/images/raspberrypi4-64` directory. If you built for version 0.0.0.1 you will need to copy the base file out and run the build again to produce a Sw Update update (file ending `.swu`) to be used for the update. You need to do this to make a usable base and update image. 
+If successful, the output image file (adu-base-image-raspberrypi4-64.wic.gz) and example .swu update file (adu-update-image.swu) should be located in `~/yocto_build_dir/tmp/deploy/images/raspberrypi4-64` directory. If you built for version 0.0.0.1 you will need to copy the base file out and run the build again to produce a Sw Update update (file ending `.swu`) to be used for the update. You need to do this to make a usable base and update image. 
 
 ```sh
 .
 ├── adu-base-image-raspberrypi4-64.wic.gz
 ├── adu-update-image-raspberrypi4-64.swu
+```
+
+## Software Bill of Materials (SBOM)
+
+### Overview
+
+Yocto automatically generates comprehensive Software Bill of Materials (SBOM) in SPDX 2.2 format for all builds. The SBOM provides complete dependency tracking, license information, and package metadata for compliance and security auditing.
+
+### SBOM Location
+
+After a successful build, SBOM files are located at:
+
+```sh
+# Main SBOM archive (compressed, contains all packages)
+~/yocto_build_dir/tmp/deploy/images/raspberrypi4-64/adu-base-image-raspberrypi4-64.spdx.tar.zst
+
+# Individual SPDX JSON files for each package
+~/yocto_build_dir/tmp/deploy/spdx/
+```
+
+### Extracting and Viewing SBOM
+
+To extract and view the SBOM:
+
+```sh
+cd ~/yocto_build_dir/tmp/deploy/images/raspberrypi4-64
+
+# Extract the SBOM archive
+tar -xf adu-base-image-raspberrypi4-64.spdx.tar.zst
+
+# List all SPDX files
+ls -lh *.spdx.json | wc -l  # Shows total number of packages
+
+# View Azure Device Update dependencies
+python3 -m json.tool recipe-azure-device-update.spdx.json | less
+```
+
+### SBOM Contents
+
+Each SPDX file contains:
+
+- **Package Information**: Name, version, description, homepage
+- **License Information**: SPDX license identifiers and copyright text
+- **Dependencies**: Complete build and runtime dependency trees
+- **Source Information**: Download URLs, Git repositories, commit hashes
+- **File Checksums**: SHA1, SHA256 checksums for verification
+- **Relationships**: Package relationships (DEPENDS, RDEPENDS, CONTAINS)
+
+### Tracking meta-azure-device-update Dependencies
+
+The `azure-device-update` package has the following direct build dependencies:
+
+- azure-iot-sdk-c
+- azure-sdk-for-cpp
+- curl
+- deliveryoptimization-agent
+- deliveryoptimization-sdk
+- catch2 (test framework)
+- glibc, gcc-runtime (core libraries)
+
+To view all dependencies:
+
+```sh
+cd ~/yocto_build_dir/tmp/deploy/images/raspberrypi4-64
+
+# View recipe dependencies
+python3 -c "
+import json
+with open('recipe-azure-device-update.spdx.json') as f:
+    data = json.load(f)
+    print('Build Dependencies:')
+    for ref in data['externalDocumentRefs']:
+        print('  -', ref['externalDocumentId'].replace('DocumentRef-dependency-recipe-', ''))
+"
+
+# View runtime dependencies
+cat runtime-azure-device-update.spdx.json | python3 -m json.tool
+```
+
+### SBOM Format Details
+
+The build generates SPDX 2.2 JSON format, which includes:
+
+- **SPDX-2.2 Specification**: Industry-standard format recognized by security scanning tools
+- **Namespace URIs**: Unique identifiers for each document
+- **External References**: Links between packages showing dependency relationships
+- **Creation Info**: Build timestamp, tool information, and creator details
+
+### Using SBOM for Compliance
+
+The generated SBOM can be used for:
+
+1. **License Compliance**: Identify all open source licenses in your image
+2. **Security Scanning**: Feed into vulnerability scanners (e.g., Grype, Trivy)
+3. **Supply Chain Security**: Track component provenance
+4. **Export Control**: Identify restricted components
+5. **Regulatory Compliance**: Meet software transparency requirements
+
+Example using with security scanners:
+
+```sh
+# Using Grype (example)
+grype sbom:./adu-base-image-raspberrypi4-64.spdx.tar.zst
+
+# Using Syft to convert formats (example)
+syft convert ./adu-base-image-raspberrypi4-64.spdx.tar.zst -o cyclonedx-json
 ```
 
 ## Build Pipelines Status
