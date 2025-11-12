@@ -72,11 +72,20 @@ popd
 
 # Launch bitbake to build the .wic image as per the yocto recipes.
 #
-# Build with default branches and commits:
+# Build with default branches (automatically fetches latest commit from branch):
 # ./scripts/build.sh -c -t Debug -o ~/adu_yocto/out
 #
-# Optional: Specify ADU Branch and Commit
+# Build with specific branch (automatically fetches HEAD commit):
+# ./scripts/build.sh -c -t Debug -o ~/adu_yocto/out --adu-git-branch feature/v-next
+#
+# Optional: Specify ADU Branch and Commit explicitly
 # ./scripts/build.sh -c -t Debug -o ~/adu_yocto/out --adu-git-branch release/1.2.0 --adu-git-commit 9cf04c49d49b587712d01e9db6e1870a70959682
+#
+# Use parallel builds for faster compilation (uses all CPU cores by default):
+# ./scripts/build.sh -c -t Debug -o ~/adu_yocto/out -j 8 --parallel-make 8
+#
+# Full rebuild (preserves sstate cache for faster rebuilds):
+# ./scripts/build.sh --rebuild -t Debug -o ~/adu_yocto/out --adu-git-branch feature/v-next
 
 ./scripts/build.sh -c -t Debug -o ~/adu_yocto/out
 
@@ -106,21 +115,6 @@ rpi4> chown adu:adu status_monitor
 rpi4> su -p adu
 rpi4> ./status_monitor
 ```
-
-### Quick Steps - Gen 2
-
-```sh
-# Same as Quick Steps - Gen 1, but provide cmdline arg overrides for build.sh and --adu-generation "2"
-# For example:
-
-./scripts/build.sh -c -t Debug -o ~/adu_yocto/out \
-    --adu-generation "2" \
-    --adu-git-branch 'main' \
-    --adu-git-commit 'e981f7a9af5f561f98a3be9ea9563f4d0f256e63' \
-    --adu-src-uri 'git://github.com/Azure/device-update'
-
-```
-
 
 ## Prerequisites
 
@@ -245,10 +239,29 @@ You can find the instructions for generating the private key and creating the pa
 
 ### Build The Project
 
-To build the project you can either use our helper script or read the `build.sh` script and use your own terminal  commands to build the layer. Keep in mind Yocto builds can take time depending on your machine. It's best to use a local cache if you're going to be running multiple builds. We use the `-o` option to specify the output directory which in turn builds a local cache that can expedite your local builds. An example invocation is specified below. It is executed from the repositories root folder. NOT the `yocto` directory.
+To build the project you can either use our helper script or read the `build.sh` script and use your own terminal commands to build the layer. Keep in mind Yocto builds can take time depending on your machine. It's best to use a local cache if you're going to be running multiple builds. We use the `-o` option to specify the output directory which in turn builds a local cache that can expedite your local builds. An example invocation is specified below. It is executed from the repositories root folder. NOT the `yocto` directory.
 
 ```sh
 ./scripts/build.sh -c -t Debug -o ~/yocto_build_dir
+```
+
+#### New Features in build.sh
+
+**Automatic Commit Hash Fetching**: When you specify `--adu-git-branch` without `--adu-git-commit`, the script automatically fetches and uses the HEAD commit hash of that branch. This ensures reproducible builds while staying current with your development branch.
+
+**Parallel Builds**: Use `-j` and `--parallel-make` options to speed up compilation by using multiple CPU cores. By default, the script detects and uses all available CPU cores.
+
+**Persistent SState Cache**: The `--rebuild` flag now preserves the sstate-cache directory, making subsequent full rebuilds much faster by reusing unchanged compilation artifacts.
+
+```sh
+# Use all CPU cores for parallel builds (auto-detected)
+./scripts/build.sh -c -t Debug -o ~/yocto_build_dir
+
+# Explicitly set parallel jobs
+./scripts/build.sh -c -t Debug -o ~/yocto_build_dir -j 8 --parallel-make 8
+
+# Full rebuild with cache preservation
+./scripts/build.sh --rebuild -t Debug -o ~/yocto_build_dir --adu-git-branch feature/v-next
 ```
 
 You can use:
@@ -256,9 +269,9 @@ You can use:
 ```sh
 ./scripts/build.sh -h
 ```
-to see the list of all options for the build. 
+to see the list of all options for the build.
 
-If successful, the output image file (adu-base-image-raspberrypi4-64.wic.gz) and example .swu update file (adu-update-image-raspberrypi4-64.swu) should be located in `$build_output_dir/tmp/deploy/images/raspberrypi4-64` directory. If you built for version 0.0.0.1 you will need to copy the base file out and run the build again to produce a Sw Update update (file ending `.swu`) to be used for the update. You need to do this to make a usable base and update image. 
+If successful, the output image file (adu-base-image-raspberrypi4-64.wic.gz) and example .swu update file (adu-update-image.swu) should be located in `$build_output_dir/tmp/deploy/images/raspberrypi4-64` directory. If you built for version 0.0.0.1 you will need to copy the base file out and run the build again to produce a Sw Update update (file ending `.swu`) to be used for the update. You need to do this to make a usable base and update image. 
 
 ```sh
 .

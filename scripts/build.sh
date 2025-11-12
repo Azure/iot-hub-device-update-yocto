@@ -47,6 +47,9 @@ Usage: build.sh [options...]
 
     -o, --out-dir <build_dir>        Set the build output directory. Default is build.
     --verbose                        Add -v to bitbake cmdline for verbose output.
+    
+    -j, --jobs <number>              Number of parallel tasks BitBake should run. Default is number of CPU cores.
+    --parallel-make <number>         Number of processes 'make' should run in parallel. Default is number of CPU cores.
 
     -h, --help                       Show this help message.
 ENDOFUSAGE
@@ -55,7 +58,7 @@ ENDOFUSAGE
 # Defaults - Gen 1
 ADU_GIT_BRANCH='develop'
 ADU_SRC_URI='git://github.com/Azure/iot-hub-device-update'
-ADU_GIT_COMMIT='d226c1ef8da00daf070f001ebc7cda92725ea759'
+ADU_GIT_COMMIT=''
 BUILD_TYPE='Debug'
 WITH_FEATURE_DELTA_UPDATE='0'
 
@@ -93,6 +96,8 @@ ADUC_PUBLIC_KEY=''
 ADU_EMBED_TEST_ROOT_KEYS=0
 CLEAN_SSTATE_RECIPE_NAME=''
 SHOW_RECIPES=0
+BB_NUMBER_THREADS=''
+PARALLEL_MAKE=''
 
 while [[ $1 != "" ]]; do
     case $1 in
@@ -200,6 +205,14 @@ while [[ $1 != "" ]]; do
     --verbose)
         VERBOSE='-v'
         ;;
+    -j | --jobs)
+        shift
+        BB_NUMBER_THREADS="$1"
+        ;;
+    --parallel-make)
+        shift
+        PARALLEL_MAKE="$1"
+        ;;
     *)
         echo "Unknown option: $1" >&2
         print_help
@@ -224,15 +237,56 @@ if [ -n "${ADU_GIT_BRANCH}" ]; then
     export ADU_GIT_BRANCH
 fi
 
-# if ADU_GIT_COMMIT is not set and not equal "AUTOREV", then use the latest commit
+# if ADU_GIT_COMMIT is not set and not equal "AUTOREV", then fetch the HEAD commit of the branch
 if [ "${ADU_GIT_COMMIT}" = "AUTOREV" ]; then
     echo "ADU_GIT_COMMIT is set to AUTOREV, using latest commit."
     export ADU_GIT_COMMIT=""
 elif [ -z "${ADU_GIT_COMMIT}" ]; then
+    echo "ADU_GIT_COMMIT not set, fetching HEAD commit hash for branch '${ADU_GIT_BRANCH}'..."
+    
+    # Validate ADU_SRC_URI is set
+    if [ -z "${ADU_SRC_URI}" ]; then
+        echo "ERROR: ADU_SRC_URI is not set. Cannot fetch commit hash."
+        exit 1
+    fi
+    
+    # Extract repo URL and convert to HTTPS format for git ls-remote
+    # Handle git://, https://, and http:// protocols
+    REPO_URL="${ADU_SRC_URI}"
+    if [[ "${REPO_URL}" == git://* ]]; then
+        REPO_URL="https://${REPO_URL#git://}"
+    elif [[ "${REPO_URL}" == http://* ]]; then
+        REPO_URL="https://${REPO_URL#http://}"
+    fi
+    
+    # Validate the URL format
+    if [[ ! "${REPO_URL}" =~ ^https://[a-zA-Z0-9.-]+/[a-zA-Z0-9._/-]+$ ]]; then
+        echo "ERROR: Invalid repository URL format: ${ADU_SRC_URI}"
+        echo "Expected format: git://github.com/owner/repo or https://github.com/owner/repo"
+        exit 1
+    fi
+    
+    echo "Fetching from: ${REPO_URL}"
+    
+    # Fetch the commit hash for the specified branch
+    ADU_GIT_COMMIT=$(git ls-remote "${REPO_URL}" "refs/heads/${ADU_GIT_BRANCH}" 2>&1 | grep -v "^fatal:" | cut -f1)
+    
+    if [ -z "${ADU_GIT_COMMIT}" ]; then
+        echo "ERROR: Failed to fetch commit hash for branch '${ADU_GIT_BRANCH}' from ${REPO_URL}"
+        echo "Please check that:"
+        echo "  1. The repository URL is correct and accessible"
+        echo "  2. The branch '${ADU_GIT_BRANCH}' exists"
+        echo "  3. You have network connectivity"
+        echo "Alternatively, specify --adu-git-commit manually."
+        exit 1
+    fi
+    
+    echo "✓ Using ADU_GIT_COMMIT: ${ADU_GIT_COMMIT} (HEAD of branch '${ADU_GIT_BRANCH}')"
     export ADU_GIT_COMMIT
 fi
 
 if [ -n "${ADU_GIT_COMMIT}" ]; then
+    echo "ADU_GIT_COMMIT is set to: ${ADU_GIT_COMMIT}"
     export ADU_GIT_COMMIT
 fi
 
@@ -303,15 +357,42 @@ if (( [ -z "$ADUC_PRIVATE_KEY" ] || [ ! -f "$ADUC_PRIVATE_KEY" ] ) || \
 fi
 
 # Remove all build output files for a full rebuild.
+# Note: We preserve the sstate-cache in a separate location to speed up rebuilds
 if [[ $REBUILD == 'true' ]]; then
-    rm -rf $BUILD_DIR/*
+    echo "Performing full rebuild - removing build directory contents (preserving sstate cache)..."
+    # Remove everything except sstate-cache if it exists
+    find $BUILD_DIR -mindepth 1 -maxdepth 1 ! -name 'sstate-cache' -exec rm -rf {} + 2>/dev/null || true
 fi
 
+# Use persistent sstate cache location outside the tmp build directory
+# This allows the cache to survive full rebuilds
 export SSTATE_DIR=$BUILD_DIR/sstate-cache
+mkdir -p $SSTATE_DIR
+echo "Using SSTATE_DIR: $SSTATE_DIR"
+
+# Set parallel build options for faster builds
+# BB_NUMBER_THREADS: Number of parallel BitBake tasks
+# PARALLEL_MAKE: Number of processes make should run in parallel (e.g., -j 8)
+NPROC=$(nproc 2>/dev/null || echo "4")
+
+if [ -z "${BB_NUMBER_THREADS}" ]; then
+    BB_NUMBER_THREADS="${NPROC}"
+fi
+
+if [ -z "${PARALLEL_MAKE}" ]; then
+    PARALLEL_MAKE="${NPROC}"
+fi
+
+export BB_NUMBER_THREADS
+export PARALLEL_MAKE="-j ${PARALLEL_MAKE}"
+
+echo "Parallel build settings:"
+echo "  BB_NUMBER_THREADS: ${BB_NUMBER_THREADS} (BitBake parallel tasks)"
+echo "  PARALLEL_MAKE: ${PARALLEL_MAKE} (make parallel processes)"
 
 # export TOP_DIR=$ROOT_DIR/yocto
 # We need to tell bitbake about any env vars it should read in.
-export BB_ENV_PASSTHROUGH_ADDITIONS="$BB_ENV_PASSTHROUGH_ADDITIONS ADUC_USE_TEST_ROOT_KEYS ADU_GENERATION ADU_GIT_BRANCH ADU_SRC_URI ADU_GIT_COMMIT DO_GIT_BRANCH DO_SRC_URI DO_GIT_COMMIT ADU_DELTA_GIT_BRANCH ADU_DELTA_SRC_URI ADU_DELTA_GIT_COMMIT BUILD_TYPE ADU_SOFTWARE_VERSION ADUC_PUBLIC_KEY ADUC_PRIVATE_KEY ADUC_PRIVATE_KEY_PASSWORD SSTATE_DIR"
+export BB_ENV_PASSTHROUGH_ADDITIONS="$BB_ENV_PASSTHROUGH_ADDITIONS ADUC_USE_TEST_ROOT_KEYS ADU_GENERATION ADU_GIT_BRANCH ADU_SRC_URI ADU_GIT_COMMIT DO_GIT_BRANCH DO_SRC_URI DO_GIT_COMMIT ADU_DELTA_GIT_BRANCH ADU_DELTA_SRC_URI ADU_DELTA_GIT_COMMIT BUILD_TYPE ADU_SOFTWARE_VERSION ADUC_PUBLIC_KEY ADUC_PRIVATE_KEY ADUC_PRIVATE_KEY_PASSWORD SSTATE_DIR BB_NUMBER_THREADS PARALLEL_MAKE"
 source $ROOT_DIR/poky/oe-init-build-env $BUILD_DIR
 
 if [[ $SHOW_RECIPES == 1 ]]; then
