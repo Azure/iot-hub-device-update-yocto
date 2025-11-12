@@ -1,0 +1,108 @@
+name: Yocto Incremental Build
+
+# This workflow is optimized for faster builds with extensive caching
+# Best for PR validation and quick iteration
+
+on:
+  pull_request:
+    branches:
+      - main
+      - scarthgap
+  workflow_dispatch:
+
+env:
+  BUILD_DIR: ${{ github.workspace }}/yocto_build
+  YOCTO_RELEASE: scarthgap
+
+jobs:
+  incremental-build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 240  # 4 hours for incremental builds
+    
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          df -h
+      
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better change detection
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          ./scripts/install-deps.sh
+      
+      # Aggressive caching strategy
+      - name: Restore downloads cache
+        uses: actions/cache/restore@v3
+        id: cache-downloads
+        with:
+          path: ${{ env.BUILD_DIR }}/build/downloads
+          key: yocto-dl-${{ env.YOCTO_RELEASE }}-${{ hashFiles('**/recipes-*/**/*.bb') }}
+          restore-keys: |
+            yocto-dl-${{ env.YOCTO_RELEASE }}-
+      
+      - name: Restore sstate cache
+        uses: actions/cache/restore@v3
+        id: cache-sstate
+        with:
+          path: ${{ env.BUILD_DIR }}/build/sstate-cache
+          key: yocto-sstate-${{ env.YOCTO_RELEASE }}-${{ github.base_ref || github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            yocto-sstate-${{ env.YOCTO_RELEASE }}-${{ github.base_ref || github.ref_name }}-
+            yocto-sstate-${{ env.YOCTO_RELEASE }}-
+      
+      - name: Setup Yocto layers
+        run: |
+          ./scripts/setup.sh
+      
+      - name: Detect changes
+        id: changes
+        run: |
+          # Detect what changed to optimize build
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "meta-azure-device-update"; then
+            echo "adu_changed=true" >> $GITHUB_OUTPUT
+          fi
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "scripts/build.sh"; then
+            echo "build_script_changed=true" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Build Yocto image (incremental)
+        run: |
+          # Use incremental build (no -c clean flag)
+          ./scripts/build.sh \
+            -t Debug \
+            -o "$BUILD_DIR" \
+            --adu-git-branch feature/v-next \
+            -j $(nproc) \
+            --parallel-make $(nproc)
+      
+      - name: Save downloads cache
+        if: steps.cache-downloads.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v3
+        with:
+          path: ${{ env.BUILD_DIR }}/build/downloads
+          key: ${{ steps.cache-downloads.outputs.cache-primary-key }}
+      
+      - name: Save sstate cache
+        if: always()
+        uses: actions/cache/save@v3
+        with:
+          path: ${{ env.BUILD_DIR }}/build/sstate-cache
+          key: yocto-sstate-${{ env.YOCTO_RELEASE }}-${{ github.base_ref || github.ref_name }}-${{ github.sha }}
+      
+      - name: Upload artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-build-${{ github.event.pull_request.number }}
+          path: |
+            ${{ env.BUILD_DIR }}/tmp/deploy/images/raspberrypi4-64/*.wic.gz
+            ${{ env.BUILD_DIR }}/tmp/deploy/images/raspberrypi4-64/*.swu
+          retention-days: 3

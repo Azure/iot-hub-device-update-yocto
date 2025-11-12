@@ -1,0 +1,131 @@
+name: Yocto Build
+
+on:
+  push:
+    branches:
+      - main
+      - scarthgap
+  pull_request:
+    branches:
+      - main
+      - scarthgap
+  workflow_dispatch:
+    inputs:
+      adu_branch:
+        description: 'ADU Git Branch'
+        required: false
+        default: 'main'
+      build_type:
+        description: 'Build Type (Debug/Release)'
+        required: false
+        default: 'Debug'
+
+env:
+  BUILD_DIR: ${{ github.workspace }}/yocto_build
+  YOCTO_RELEASE: scarthgap
+
+jobs:
+  yocto-build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360  # 6 hours max
+    
+    steps:
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+          root-reserve-mb: 8192
+          swap-size-mb: 4096
+          remove-dotnet: 'true'
+          remove-android: 'true'
+          remove-haskell: 'true'
+          remove-codeql: 'true'
+          remove-docker-images: 'true'
+      
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          ./scripts/install-deps.sh
+      
+      - name: Cache Yocto downloads
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.BUILD_DIR }}/build/downloads
+          key: yocto-downloads-${{ env.YOCTO_RELEASE }}-${{ hashFiles('**/recipes-*/**/*.bb', '**/recipes-*/**/*.bbappend') }}
+          restore-keys: |
+            yocto-downloads-${{ env.YOCTO_RELEASE }}-
+      
+      - name: Cache sstate
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.BUILD_DIR }}/build/sstate-cache
+          key: yocto-sstate-${{ env.YOCTO_RELEASE }}-${{ github.sha }}
+          restore-keys: |
+            yocto-sstate-${{ env.YOCTO_RELEASE }}-
+      
+      - name: Setup Yocto layers
+        run: |
+          ./scripts/setup.sh
+      
+      - name: Build Yocto image
+        run: |
+          BUILD_TYPE="${{ github.event.inputs.build_type || 'Debug' }}"
+          ADU_BRANCH="${{ github.event.inputs.adu_branch || 'main' }}"
+          
+          ./scripts/build.sh \
+            -t "$BUILD_TYPE" \
+            -o "$BUILD_DIR" \
+            --adu-git-branch "$ADU_BRANCH" \
+            -j $(nproc) \
+            --parallel-make $(nproc)
+      
+      - name: Check build artifacts
+        run: |
+          ls -lh $BUILD_DIR/tmp/deploy/images/raspberrypi4-64/*.wic.gz || true
+          ls -lh $BUILD_DIR/tmp/deploy/images/raspberrypi4-64/*.swu || true
+          
+          # Show build size
+          du -sh $BUILD_DIR
+      
+      - name: Upload build artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: yocto-images-${{ github.sha }}
+          path: |
+            ${{ env.BUILD_DIR }}/tmp/deploy/images/raspberrypi4-64/*.wic.gz
+            ${{ env.BUILD_DIR }}/tmp/deploy/images/raspberrypi4-64/*.swu
+          retention-days: 7
+      
+      - name: Upload SBOM
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ github.sha }}
+          path: |
+            ${{ env.BUILD_DIR }}/tmp/deploy/images/raspberrypi4-64/*.spdx.tar.zst
+          retention-days: 30
+      
+      - name: Build summary
+        if: always()
+        run: |
+          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Type**: ${{ github.event.inputs.build_type || 'Debug' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **ADU Branch**: ${{ github.event.inputs.adu_branch || 'main' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f "$BUILD_DIR/tmp/deploy/images/raspberrypi4-64/adu-base-image-raspberrypi4-64.wic.gz" ]; then
+            SIZE=$(du -h "$BUILD_DIR/tmp/deploy/images/raspberrypi4-64/adu-base-image-raspberrypi4-64.wic.gz" | cut -f1)
+            echo "- **Base Image Size**: $SIZE" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ -f "$BUILD_DIR/tmp/deploy/images/raspberrypi4-64/adu-update-image.swu" ]; then
+            SIZE=$(du -h "$BUILD_DIR/tmp/deploy/images/raspberrypi4-64/adu-update-image.swu" | cut -f1)
+            echo "- **Update Image Size**: $SIZE" >> $GITHUB_STEP_SUMMARY
+          fi

@@ -1,0 +1,175 @@
+name: Yocto Build (Self-Hosted)
+
+# This workflow is designed for self-hosted runners with better resources
+# Recommended runner specs:
+# - 8+ CPU cores
+# - 16GB+ RAM
+# - 200GB+ disk space
+# - Ubuntu 22.04
+
+on:
+  push:
+    branches:
+      - main
+      - scarthgap
+      - 'release/**'
+  schedule:
+    # Nightly builds
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      adu_branch:
+        description: 'ADU Git Branch'
+        required: false
+        default: 'main'
+      adu_commit:
+        description: 'ADU Git Commit (optional)'
+        required: false
+      build_type:
+        description: 'Build Type'
+        required: false
+        default: 'Debug'
+        type: choice
+        options:
+          - Debug
+          - Release
+      clean_build:
+        description: 'Clean build'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  BUILD_DIR: /data/yocto_builds/${{ github.repository }}
+  YOCTO_RELEASE: scarthgap
+
+jobs:
+  self-hosted-build:
+    runs-on: self-hosted
+    timeout-minutes: 480  # 8 hours for full builds
+    
+    steps:
+      - name: Cleanup workspace
+        run: |
+          # Clean git workspace but preserve build cache
+          git clean -ffdx
+          git reset --hard
+      
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          lfs: true
+      
+      - name: Install/Update dependencies
+        run: |
+          ./scripts/install-deps.sh
+      
+      - name: Check disk space
+        run: |
+          df -h
+          echo "Available space in build directory:"
+          df -h $BUILD_DIR || true
+      
+      - name: Setup Yocto layers
+        run: |
+          ./scripts/setup.sh
+      
+      - name: Determine build flags
+        id: build-flags
+        run: |
+          if [ "${{ github.event.inputs.clean_build }}" = "true" ]; then
+            echo "clean_flag=--rebuild" >> $GITHUB_OUTPUT
+          else
+            echo "clean_flag=" >> $GITHUB_OUTPUT
+          fi
+          
+          COMMIT_FLAG=""
+          if [ -n "${{ github.event.inputs.adu_commit }}" ]; then
+            COMMIT_FLAG="--adu-git-commit ${{ github.event.inputs.adu_commit }}"
+          fi
+          echo "commit_flag=$COMMIT_FLAG" >> $GITHUB_OUTPUT
+      
+      - name: Build Yocto image
+        run: |
+          BUILD_TYPE="${{ github.event.inputs.build_type || 'Debug' }}"
+          ADU_BRANCH="${{ github.event.inputs.adu_branch || 'main' }}"
+          
+          ./scripts/build.sh \
+            ${{ steps.build-flags.outputs.clean_flag }} \
+            -t "$BUILD_TYPE" \
+            -o "$BUILD_DIR" \
+            --adu-git-branch "$ADU_BRANCH" \
+            ${{ steps.build-flags.outputs.commit_flag }} \
+            -j $(nproc) \
+            --parallel-make $(nproc)
+      
+      - name: Generate build report
+        if: always()
+        run: |
+          REPORT_FILE="${BUILD_DIR}/build-report-${{ github.sha }}.txt"
+          
+          echo "=== Yocto Build Report ===" > "$REPORT_FILE"
+          echo "Date: $(date)" >> "$REPORT_FILE"
+          echo "Commit: ${{ github.sha }}" >> "$REPORT_FILE"
+          echo "Branch: ${{ github.ref_name }}" >> "$REPORT_FILE"
+          echo "Build Type: ${{ github.event.inputs.build_type || 'Debug' }}" >> "$REPORT_FILE"
+          echo "ADU Branch: ${{ github.event.inputs.adu_branch || 'main' }}" >> "$REPORT_FILE"
+          echo "" >> "$REPORT_FILE"
+          
+          echo "=== Build Artifacts ===" >> "$REPORT_FILE"
+          ls -lh $BUILD_DIR/tmp/deploy/images/raspberrypi4-64/*.{wic.gz,swu} 2>/dev/null >> "$REPORT_FILE" || echo "No artifacts found" >> "$REPORT_FILE"
+          
+          echo "" >> "$REPORT_FILE"
+          echo "=== Disk Usage ===" >> "$REPORT_FILE"
+          du -sh $BUILD_DIR >> "$REPORT_FILE"
+          
+          cat "$REPORT_FILE"
+      
+      - name: Archive build artifacts
+        if: success()
+        run: |
+          ARCHIVE_DIR="/data/archives/${{ github.repository }}/${{ github.ref_name }}"
+          mkdir -p "$ARCHIVE_DIR"
+          
+          # Copy images
+          cp $BUILD_DIR/tmp/deploy/images/raspberrypi4-64/*.wic.gz "$ARCHIVE_DIR/" || true
+          cp $BUILD_DIR/tmp/deploy/images/raspberrypi4-64/*.swu "$ARCHIVE_DIR/" || true
+          
+          # Copy SBOM
+          cp $BUILD_DIR/tmp/deploy/images/raspberrypi4-64/*.spdx.tar.zst "$ARCHIVE_DIR/" || true
+          
+          # Create manifest
+          echo "Build: ${{ github.sha }}" > "$ARCHIVE_DIR/manifest.txt"
+          echo "Date: $(date)" >> "$ARCHIVE_DIR/manifest.txt"
+          echo "Branch: ${{ github.ref_name }}" >> "$ARCHIVE_DIR/manifest.txt"
+          
+          ls -lh "$ARCHIVE_DIR"
+      
+      - name: Upload to GitHub
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: yocto-build-${{ github.ref_name }}-${{ github.sha }}
+          path: |
+            ${{ env.BUILD_DIR }}/tmp/deploy/images/raspberrypi4-64/*.wic.gz
+            ${{ env.BUILD_DIR }}/tmp/deploy/images/raspberrypi4-64/*.swu
+            ${{ env.BUILD_DIR }}/tmp/deploy/images/raspberrypi4-64/*.spdx.tar.zst
+          retention-days: 30
+      
+      - name: Cleanup old builds
+        if: always()
+        run: |
+          # Keep only last 3 builds worth of tmp directories
+          find $BUILD_DIR -maxdepth 1 -name "tmp-*" -type d -mtime +7 -exec rm -rf {} \; || true
+          
+          # Clean up old downloads (keep last 30 days)
+          find $BUILD_DIR/build/downloads -type f -mtime +30 -delete || true
+          
+          df -h
+      
+      - name: Notification
+        if: failure()
+        run: |
+          echo "Build failed for commit ${{ github.sha }}"
+          # Add your notification logic here (Slack, Teams, email, etc.)
