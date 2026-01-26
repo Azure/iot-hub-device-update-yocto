@@ -12,9 +12,48 @@ The repository and instructions create an image for the RaspberryPi 4 which can 
 
 For more information about the Device Update for IoT Hub, see the link to the source code of [Device Update Agent](https://github.com/Azure/iot-hub-device-update)
 
+See [why we chose Raspberry Pi 4](#why-raspberry-pi-4) as the reference platform below.
+
+## Table of Contents
+
+- [Yocto Layers Overview](#yocto-layers-overview)
+- [Quick Start](#quick-start)
+- [Prerequisites](#prerequisites)
+- [Delta Updates](#delta-updates-binary-diffpatch)
+- [Software Bill of Materials (SBOM)](#software-bill-of-materials-sbom)
+- [Build Pipelines](#build-pipelines-status)
+- [Using Your Own Board](#using-your-own-board-and-guidance-for-production-images)
+- [Why Raspberry Pi 4?](#why-raspberry-pi-4)
+
+## Yocto Layers Overview
+
+This repository integrates multiple Yocto/OpenEmbedded layers for building ADU-enabled images. Each layer has comprehensive documentation - please refer to the individual layer README files for detailed information.
+
+### ADU-Specific Layers
+
+| Layer | Purpose | Key Components | Documentation |
+|-------|---------|----------------|---------------|
+| **meta-azure-device-update** | Core ADU agent and Azure SDK infrastructure | ADU agent, Azure IoT SDK C, Azure SDK for C++, Delivery Optimization agent/SDK, systemd services | [README](yocto/meta-azure-device-update/README.md), [OOBE Service](yocto/meta-azure-device-update/docs/README-ADU-OOBE-SERVICE.md) |
+| **meta-iot-hub-device-update-delta** | Delta update processing library | `libadudiffapi.so`, native diffgen tools, applydiff utility, e2fsprogs/jsoncpp patches | [README](yocto/meta-iot-hub-device-update-delta/README.md) |
+| **meta-raspberrypi-adu** | Raspberry Pi 4 reference implementation | A/B partition management, U-Boot scripts, boot health validation, SWUpdate handlers | [README](yocto/meta-raspberrypi-adu/README.md), [A/B Architecture](yocto/meta-raspberrypi-adu/ADU-AB-UPDATE-ARCHITECTURE-GUIDE.md), [Porting Guide](yocto/meta-raspberrypi-adu/PORTING-GUIDE.md) |
+| **meta-azure-device-update-samples** | Board-agnostic samples and delta generation workflow | Versioned update images (v1/v2/v3), automated delta generation, test packages, import manifests | [README](yocto/meta-azure-device-update-samples/README.md) |
+
+### Third-Party Dependency Layers
+
+| Layer | Purpose | Branch |
+|-------|---------|--------|
+| **poky** | Yocto reference distribution (bitbake, oe-core) | scarthgap |
+| **meta-openembedded** | Common utilities (meta-oe, meta-python, meta-networking) | scarthgap |
+| **meta-raspberrypi** | Raspberry Pi BSP support | scarthgap |
+| **meta-swupdate** | SWUpdate framework for atomic image updates | scarthgap |
+| **meta-clang** | LLVM/Clang toolchain (required for delta builds) | scarthgap |
+| **meta-dotnet-core** | .NET Core runtime (optional, for advanced tooling) | scarthgap |
+
+> **Note:** For detailed layer-specific documentation including recipes, configuration options, and troubleshooting, please refer to each layer's README file.
+
 ## Quick Start
 
-On a machine installed with [Ubuntu 20.04 LTS (Focal Fossa) Server ISO](https://cdimage.ubuntu.com/ubuntu-legacy-server/releases/20.04/release/ubuntu-20.04.1-legacy-server-amd64.iso),
+On a machine installed with [Ubuntu 22.04 LTS (Jammy Jellyfish)](https://releases.ubuntu.com/22.04/),
 ensure at least 100GB of space on the partition where /home is mounted (or adjust the `base_yocto_path` var in the steps below and in scripts/setup.sh accordingly).
 
 ### Directory Structure After Quick Steps
@@ -30,7 +69,8 @@ $HOME
     │   └── yocto
     │       ├── config-templates
     │       ├── meta-azure-device-update          # DU Agent yocto recipes
-    │       ├── meta-iot-hub-device-update-delta  # Delta updates recipe - (Currently NOT working)
+    │       ├── meta-azure-device-update-samples  # Board-agnostic samples & delta demos
+    │       ├── meta-iot-hub-device-update-delta  # Delta updates library
     │       ├── meta-openembedded                 # OpenEmbedded layers
     │       ├── meta-raspberrypi                  # RPi layers
     │       ├── meta-raspberrypi-adu              # ADU-specific RPi layer
@@ -43,7 +83,7 @@ $HOME
         └── sstate-cache                          # post successful yocto build
 ```
 
-### Quick Steps - Gen 1
+### Quick Steps
 
 ```sh
 # Clone the main yocto repo that has install-deps.sh, setup.sh, and build.sh scripts.
@@ -52,7 +92,7 @@ git clone 'https://github.com/azure/iot-hub-device-update-yocto' --branch scarth
 
 cd $HOME/adu_yocto/iot-hub-device-update-yocto
 
-# Install dev dependencies via ubuntu 20.04 APT packages.
+# Install dev dependencies via APT packages.
 ./scripts/install-deps.sh
 
 # Clones poky and the meta layers to dirs under $HOME/adu_yocto/yocto/
@@ -94,26 +134,44 @@ pushd ~/yocto_build_dir
 find . -type f -name '*.wic' | grep -i deploy
 ```
 
-### Build and Run Status Monitor for ARM64 using Yocto Toolchain
+### Build and Run Status Monitor for ARM64
+
+The **Status Monitor** is a command-line diagnostic tool that continuously monitors the Azure Device Update agent's status on the device. It's useful for:
+
+- **Debugging**: Watch agent state transitions during updates in real-time
+- **Integration Testing**: Verify agent behavior during automated test runs
+- **Troubleshooting**: Identify connectivity or deployment issues
+
+The tool uses the ADU SDK to query agent status and supports multiple output formats (human-readable, JSON, CSV).
+
+#### Build the Status Monitor
+
+After a successful Yocto build, compile the status_monitor for ARM64:
 
 ```sh
-# After building the .wic above
+cd ~/adu_yocto/iot-hub-device-update-yocto
 
+# Build using Yocto cross-compiler
 ./scripts/build_status_monitor.sh
-file ../sdk_examples/status_monitor
-ls -la ../sdk_examples/status_monitor
 
-# After flashing the RPi4 device with the .wic from above:
+# Verify it's built for ARM64
+file ~/adu_yocto/sdk_examples/status_monitor
+```
 
-# copy to rpi4
-scp ../sdk_examples/user@<IP of rpi4device>:/var/lib/adu/
+#### Deploy and Run on Device
 
-# run status monitor
-ssh user@<IP of rpi4device>
-rpi4> cd /var/lib/adu
-rpi4> chown adu:adu status_monitor
-rpi4> su -p adu
-rpi4> ./status_monitor
+```sh
+# Copy to Raspberry Pi
+scp ~/adu_yocto/sdk_examples/status_monitor root@<rpi-ip>:/home/adu/
+
+# SSH to device and run
+ssh root@<rpi-ip>
+cd /home/adu
+chown adu:adu status_monitor
+su -p adu
+./status_monitor --help          # Show usage
+./status_monitor -i 5            # Monitor every 5 seconds
+./status_monitor -f json -c      # JSON format, changes only
 ```
 
 ## Prerequisites
@@ -123,97 +181,81 @@ Before getting started with this project, please get yourself familiar with the 
 - [The Yocto Project Software Overview](https://www.yoctoproject.org/software-overview/)
 - [The Device Update for IoTHub Overview](http://github.com/azure/iot-hub-device-update)
 
+### WiFi/Bluetooth Support (Optional)
+
+**By default, WiFi and Bluetooth are DISABLED** in the built images. This is because enabling these features requires accepting a proprietary firmware license.
+
+#### Why is WiFi/Bluetooth disabled by default?
+
+The Raspberry Pi 4's onboard WiFi/Bluetooth chip (Broadcom BCM43455) requires proprietary firmware distributed under the **"synaptics-killswitch" license**. This is a non-open-source license with specific terms that must be explicitly accepted.
+
+To ensure you are aware of and consent to these licensing terms, WiFi/Bluetooth support is disabled by default and must be explicitly enabled during the build.
+
+#### How to enable WiFi/Bluetooth
+
+Add the `--enable-wifi-bluetooth` flag to your build command:
+
+```sh
+./scripts/build.sh -c -t Debug -o ~/yocto_build_dir --enable-wifi-bluetooth
+```
+
+This will:
+1. Accept the `synaptics-killswitch` license on your behalf
+2. Include the BCM43455 WiFi/Bluetooth firmware in the image
+3. Enable WiFi and Bluetooth hardware features
+
+#### Alternative: Use Ethernet or USB WiFi/Bluetooth
+
+If you prefer not to accept the proprietary license, you can:
+- **Use wired Ethernet** for network connectivity (recommended for OTA updates)
+- **Use USB WiFi/Bluetooth dongles** with open-source driver support (e.g., Atheros, RTL8188 chipsets)
+
+#### License Information
+
+- **License Name**: synaptics-killswitch
+- **Firmware Package**: linux-firmware-rpidistro-bcm43455
+- **What it controls**: WiFi and Bluetooth functionality on Raspberry Pi 4
+- **License details**: [Raspberry Pi Firmware Repository](https://github.com/RPi-Distro/firmware-nonfree)
+
 ### Get Source Code
 
-Please note that, at the time of this writing, we only support `scarthgap` release of the Yocto Project. 
+> **Note:** The recommended approach is to use `./scripts/setup.sh` which automates all layer cloning. The manual instructions below are provided for reference.
 
-The following variables are referenced in the below section setting up the build. 
+We only support the `scarthgap` release of the Yocto Project.
 
-| Variable Name | Description |
-|---|---|
-| $yocto_release | A name of the version of the Yocto Project used to build the images.<br/>(Only support `scarthgap` at the moment) |
-| $project_root  | A root directory where this project will be cloned into.|
-| $adu_release   | The release of Device Update you're planning on using (should default to `'main'`) | 
-
-You can either just include the string wholesale in the terminal (eg for `$yocto_release` just use `'scarthgap'`) or set the variable at the beginning and then copy the command from this screen.
-
-You can set a bash variable like `yocto_release` like this:
+#### Automated Setup (Recommended)
 
 ```sh
-yocto_release=scarthgap
+# Clone this repository
+git clone https://github.com/Azure/iot-hub-device-update-yocto -b scarthgap ~/adu_yocto/iot-hub-device-update-yocto
+cd ~/adu_yocto/iot-hub-device-update-yocto
+
+# Clone all required meta-layers automatically
+./scripts/setup.sh
 ```
-and for `adu_release` like this: 
+
+#### Manual Setup (Reference)
+
+If you prefer manual control, clone layers individually into the `yocto/` directory:
 
 ```sh
-adu_release=main
+cd ~/adu_yocto/iot-hub-device-update-yocto/yocto
+
+# Core Yocto layers
+git clone --depth 1 --branch scarthgap git://git.yoctoproject.org/poky
+git clone --depth 1 --branch scarthgap git://git.openembedded.org/meta-openembedded
+git clone --depth 1 --branch scarthgap https://github.com/sbabic/meta-swupdate
+git clone --depth 1 --branch scarthgap git://git.yoctoproject.org/meta-raspberrypi
+
+# ADU layers (use 'main' or specific release branch)
+git clone --branch main https://github.com/azure/meta-azure-device-update
+git clone --branch main https://github.com/azure/meta-raspberrypi-adu
+
+# Optional: Delta update support (requires meta-clang)
+git clone --branch scarthgap https://github.com/kraj/meta-clang
+git clone --branch main https://github.com/azure/meta-iot-hub-device-update-delta
+git clone --branch main https://github.com/azure/meta-azure-device-update-samples
 ```
-and for `project_root` like this:
-
-```sh
-project_root=~/
-```
-
-The first step for building the project is cloning this repository onto your device using the following command:
-
-1. Clone this repository onto your device:
-    
-```sh
-git clone https://github.com/Azure/iot-hub-device-update-yocto -b <branchname> $project_root/iot-hub-device-update-yocto
-```
-
-2. Once you've cloned the project you next need to change into our "working directory" where the individual layers (in Yocto these layers build up to an image like a cake or foundation). 
-
-```sh
-cd $project_root/iot-hub-device-update/yocto 
-```
-
-3. Once you're in the `yocto` directory we need to check out the Yocto Build "engine" or base layer so we can build with it. 
-
-```sh
-git clone --depth 1 --branch $yocto_release git://git.yoctoproject.org/poky
-```
-
-4. Next we need to checkout the rest of the dependency layers into the `yocto` directory
-
-    1. Clone the SwUpdate meta layer 
-
-    ```sh
-    git clone --depth 1 --branch $yocto_release  https://github.com/sbabic/meta-swupdate
-    ```
-
-    2. Clone the Open Embedded meta layer. This layer include many modules (or layers) needed for building a Linux-base system.
-
-    ```sh
-    git clone --depth 1 --branch $yocto_release  git://git.openembedded.org/meta-openembedded
-    ```
-
-    3. Clone the Raspberry Pi meta layer. Since, the reference image that we are building is for a Raspberry Pi 4 hardware.
-
-    ```sh
-    git clone --depth 1 --branch $yocto_release git://git.yoctoproject.org/meta-raspberrypi
-    ```
-
-5. Within the same directory we are now going to include the Device Update for IotHub layers which builds Device Update agent and provides those artifacts for the `meta-raspberrypi-adu` layer. The `meta-raspberrypi-adu` layer then integrates the Device Update agent and modifies the image build instructions within `meta-raspberrypi` to output the `adu-base-image-<machine-name>.wic.gz` and `adu-update-image-<machine-name>.swu`. These are artifacts are what is used to test out Device Update for IotHub. For more information on these layers and their outputs please read the `README.md` in each of the repos. 
-
-    1. From within the `yocto` directory checkout `meta-azure-device-update` at the version of Device Update you plan to use in your test. 
-
-    ```sh
-    git clone --branch $adu_release http://github.com/azure/meta-azure-device-update
-    ```
-
-    2. From within the `yocto` directory checkout `meta-raspberrypi-adu` at the version of Device Update you plan to use in your test. 
-
-    ```sh
-    git clone --branch $adu_release http://github.com/azure/meta-raspberrypi-adu
-    ```
-
-    3. (optional) If you're planning on using delta updates you can checkout the `meta-iot-hub-device-update-delta` layer that integrates that functionality into that agent. Please read the you can read more [here](https://learn.microsoft.com/azure/iot-hub-device-update/delta-updates) on learn.ms.com and [here](http://github.com/azure/meta-iot-hub-device-update-delta) within the meta-layer repository if you want to know more. 
-
-    ```sh
-    git clone --branch $adu_release http://github.com/azure/meta-iot-hub-device-update-delta
-    ```
-
-Next we move on to how to build the project assuming you've setup the project like above instructions. If you don't follow the setup instructions you will have to make modifications to `scripts/build.sh` to make sure the build works. 
 
 ### Building The Project Locally
 
@@ -221,13 +263,8 @@ Next we move on to how to build the project assuming you've setup the project li
 
 For more information on the Yocto build system, the open embedded base image, and example builds please see [Yocto Project Quick Build](https://docs.yoctoproject.org/brief-yoctoprojectqs/index.html#yocto-project-quick-build). 
 
-Please look into `scripts/install-deps.sh` to determine what you may need to integrate into your build as you move forward with the project. 
-
-
-1. From the `project_root` please execute the following command in your terminal
-
 ```sh
-sudo ./scripts/install-deps.h
+sudo ./scripts/install-deps.sh
 ```
 
 ### Creating the Private Key for Sw Update Signing
@@ -278,6 +315,61 @@ If successful, the output image file (adu-base-image-raspberrypi4-64.wic.gz) and
 ├── adu-base-image-raspberrypi4-64.wic.gz
 ├── adu-update-image-raspberrypi4-64.swu
 ```
+
+## Delta Updates (Binary Diff/Patch)
+
+Delta updates dramatically reduce download sizes by generating small differential update files between SWU images (typically 90%+ bandwidth reduction).
+
+### Architecture Overview
+
+The delta update system uses a **dual-build approach**:
+
+| Component | Purpose | Built For |
+|-----------|---------|-----------|
+| **Native tools** | Generate `.diff` files during Yocto build | x86_64 build host |
+| **Target library** | Apply `.diff` files on device | ARM64 target |
+
+**Key layers:**
+- **meta-iot-hub-device-update-delta** — C++ delta processing library and native tools
+- **meta-azure-device-update-samples** — Automated delta generation workflow with versioned images
+
+### Quick Start
+
+```sh
+# Build base image, versioned update images, and delta files
+./scripts/build.sh --local-sources ADU,ADU_DELTA \
+  -o ~/adu_yocto/out/build -j 6 --parallel-make 6 \
+  --rebuild adu-base-image,adu-update-image-v1,adu-update-image-v2,adu-update-image-v3,adu-delta-image
+```
+
+### Generated Artifacts
+
+```sh
+~/adu_yocto/out/build/tmp/deploy/images/raspberrypi4-64/
+├── adu-base-image-raspberrypi4-64.wic.gz    # Base flashable image
+├── adu-update-image-v1-*.swu                # Version 1 update package
+├── adu-update-image-v2-*.swu                # Version 2 update package
+├── adu-update-image-v3-*.swu                # Version 3 update package
+├── adu-delta-v1-to-v2.diff                  # Delta: v1 → v2
+├── adu-delta-v2-to-v3.diff                  # Delta: v2 → v3
+└── adu-delta-v1-to-v3.diff                  # Delta: v1 → v3 (skip v2)
+```
+
+### Prerequisites
+
+1. **.NET SDK 8.0** — Required for DiffGenTool (run `./scripts/install-deps.sh` to install)
+2. **Pre-cache NuGet packages** — Run `dotnet restore` before BitBake (see layer docs)
+3. **meta-clang** layer — Required dependency for delta builds
+
+### Detailed Documentation
+
+For comprehensive delta update documentation including:
+- Build prerequisites and troubleshooting
+- DiffGenTool architecture (C# → C++ interop)
+- PAMZ format specification
+- Verification and testing procedures
+
+**See:** [meta-azure-device-update-samples/README.md](yocto/meta-azure-device-update-samples/README.md) and [meta-iot-hub-device-update-delta/README.md](yocto/meta-iot-hub-device-update-delta/README.md)
 
 ## Software Bill of Materials (SBOM)
 
@@ -421,3 +513,60 @@ Like is said at the beginning of this document this repository is intended to be
 ## Question? Comment? Bug?
 
 Please create a GitHub issue and we'll get back to you as soon as we're able. Your feedback is integral to improving the agent, our software practices, and product direction. We're always happy to chat.
+
+## Why Raspberry Pi 4?
+
+We chose **Raspberry Pi 4** as the reference platform to demonstrate Azure Device Update (ADU) integration for several key reasons:
+
+### Rationale
+- **Accessibility**: Raspberry Pi 4 is widely available, affordable, and familiar to developers and IoT enthusiasts worldwide
+- **Representative Architecture**: Demonstrates OTA update integration patterns applicable to a broad range of embedded Linux devices
+- **ARM Cortex-A72 Baseline**: Provides a realistic example for mid-to-high performance embedded systems using modern ARM architecture
+
+This implementation serves as a **reference example** showing how to integrate ADU into customer devices, enabling secure over-the-air (OTA) updates with SWUpdate and delta update capabilities.
+
+### About ARM Cortex-A72
+
+The Raspberry Pi 4 uses the **Broadcom BCM2711** SoC featuring a quad-core **ARM Cortex-A72** CPU clocked at up to 1.8 GHz [[Raspberry Pi 4 Tech Specs](https://www.raspberrypi.com/products/raspberry-pi-4-model-b/specifications/)].
+
+**Cortex-A72** [[ARM Official Docs](https://developer.arm.com/Processors/Cortex-A72)] is a high-performance, power-efficient 64-bit ARM processor core designed for:
+- Mid-to-high performance mobile, embedded, and enterprise applications
+- Out-of-order superscalar pipeline with advanced power management
+- ARMv8-A architecture with support for AArch64 (64-bit) and AArch32 (32-bit) execution states
+
+### Popular Platforms Using Cortex-A72
+
+The Cortex-A72 architecture is used across diverse industries, making this reference implementation relevant to many real-world deployment scenarios:
+
+#### 📟 Consumer & Development Platforms
+- **Raspberry Pi 4** - Broadcom BCM2711 SoC with quad-core Cortex-A72 @ 1.8 GHz [[Wikipedia](https://en.wikipedia.org/wiki/Raspberry_Pi)] [[RaspberryPi.com](https://www.raspberrypi.com)]
+
+#### 📱 Mobile & Embedded SoCs
+- **Qualcomm Snapdragon 650/652/653** - Mid-tier smartphone chips with Cortex-A72 cores [[Wikipedia](https://en.wikipedia.org/wiki/List_of_Qualcomm_Snapdragon_systems_on_chips)]
+
+#### 🔧 Industrial, Automotive & Networking SoCs
+- **NXP i.MX8 family** - High-performance automotive and industrial processors [[Wikipedia](https://en.wikipedia.org/wiki/I.MX)] [[NXP.com](https://www.nxp.com/products/processors-and-microcontrollers/arm-processors/i-mx-applications-processors:IMX_HOME)]
+- **NXP Layerscape series** - Edge networking and NFV platforms:
+  - LS1026A, LS1046A, LS2044A/LS2084A, LS2048A/LS2088A
+  - LX2160A, LX2120A, LX2080A - Up to 16 Cortex-A72 cores [[Wikipedia](https://en.wikipedia.org/wiki/QorIQ)] [[NXP.com](https://www.nxp.com/products/processors-and-microcontrollers/arm-processors/layerscape-processors:LAYERSCAPE)] [[SolidRun](https://www.solid-run.com)]
+- **Texas Instruments Jacinto 7** - Automotive ADAS and gateway platforms [[Wikipedia](https://en.wikipedia.org/wiki/Texas_Instruments_DRA7xx)]
+
+#### 🎥 Media & AI Edge SoCs
+- **Rockchip RK3399, RK3576** - Chromebooks, edge AI devices, and media processors [[Wikipedia](https://en.wikipedia.org/wiki/Rockchip)]
+
+
+#### 🔌 Industrial Vision & Multimedia SoCs
+- **Texas Instruments AM68x family** - Dual-core Cortex-A72 @ 2 GHz for vision/multimedia applications [[TI.com](https://www.ti.com)]
+
+### Summary by Category
+
+| Category | Common SoCs / Platforms |
+|----------|------------------------|
+| **Single-board computers** | Raspberry Pi 4 (Broadcom BCM2711) |
+| **Smartphones / mobile devices** | Snapdragon 650/652/653 |
+| **Embedded / automotive SoCs** | NXP i.MX8, TI Jacinto 7 |
+| **Enterprise / networking chips** | NXP Layerscape LX/LS series |
+| **Media/vision processing SoCs** | Rockchip RK3399/3576, TI AM68x series |
+
+By building on Raspberry Pi 4, developers gain insights applicable to a wide ecosystem of Cortex-A72-based devices across consumer, industrial, automotive, and cloud infrastructure domains.
+

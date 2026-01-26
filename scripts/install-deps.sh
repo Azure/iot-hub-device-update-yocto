@@ -85,3 +85,43 @@ else
     echo "Unsupported Ubuntu version: $UBUNTU_VERSION"
     exit 1
 fi
+
+#
+# Install .NET SDK for meta-iot-hub-device-update-delta native build tools
+# The DiffGenTool (delta diff generation) requires .NET 6 or 8 SDK on the host
+#
+install_dotnet_sdk() {
+    echo "Checking for .NET SDK..."
+    if command -v dotnet &> /dev/null; then
+        DOTNET_VERSION=$(dotnet --version 2>/dev/null)
+        echo "✓ .NET SDK already installed: $DOTNET_VERSION"
+        return 0
+    fi
+
+    echo "Installing .NET 8 SDK..."
+    
+    # Download and run the official dotnet install script
+    wget -q https://dot.net/v1/dotnet-install.sh -O /tmp/dotnet-install.sh
+    chmod +x /tmp/dotnet-install.sh
+    
+    # Install to /usr/share/dotnet (system-wide)
+    sudo /tmp/dotnet-install.sh --channel 8.0 --install-dir /usr/share/dotnet
+    
+    # Create symlink if not exists
+    if [ ! -f /usr/bin/dotnet ]; then
+        sudo ln -s /usr/share/dotnet/dotnet /usr/bin/dotnet
+    fi
+    
+    # Verify installation
+    if command -v dotnet &> /dev/null; then
+        echo "✓ .NET SDK installed successfully: $(dotnet --version)"
+    else
+        echo "⚠ .NET SDK installation may have failed. Please verify manually."
+        echo "  You can also install via: sudo apt-get install -y dotnet-sdk-8.0"
+    fi
+    
+    rm -f /tmp/dotnet-install.sh
+}
+
+install_dotnet_sdk
+
