@@ -35,7 +35,7 @@ Usage: build.sh [options...]
     --adu-generation                 The device update agent. Options are 1 and 2. Default is 1.
     --adu-key-dir <dir>              Set the directory where the ADU keys are stored. Default is \$SCRIPT_DIR/../keys.
     --adu-embed-test-root-keys       Use test root keys instead of production root keys and enable e2e testing.
-    
+
     --adu-git-branch <branch>        Set the ADU Client (ADUC) branch to build. Default is 'develop'.
     --adu-src-uri <uri>              Set the URI for the ADUC repo.
     --adu-git-commit <commit hash>   Set the commit hash for the ADUC repo.
@@ -92,7 +92,7 @@ Usage: build.sh [options...]
 
     -o, --out-dir <build_dir>        Set the build output directory. Default is build.
     --verbose                        Add -v to bitbake cmdline for verbose output.
-    
+
     -j, --jobs <number>              Number of parallel tasks BitBake should run. Default is number of CPU cores.
     --parallel-make <number>         Number of processes 'make' should run in parallel. Default is number of CPU cores.
 
@@ -186,7 +186,7 @@ while [[ $1 != "" ]]; do
         case "$1" in
             1|true|True|TRUE) ADU_EMBED_TEST_ROOT_KEYS=1 ;;
             0|false|False|FALSE) ADU_EMBED_TEST_ROOT_KEYS=0 ;;
-            *) 
+            *)
                 echo "ERROR: Invalid value for --adu-embed-test-root-keys: $1"
                 echo "Valid values: 1, 0, true, false"
                 exit 1
@@ -394,13 +394,13 @@ if [ "${ADU_GIT_COMMIT}" = "AUTOREV" ] || [ "${ADU_GIT_COMMIT}" = "HEAD" ] || [ 
     else
         echo "ADU_GIT_COMMIT not set, fetching HEAD commit hash for branch '${ADU_GIT_BRANCH}'..."
     fi
-    
+
     # Validate ADU_SRC_URI is set
     if [ -z "${ADU_SRC_URI}" ]; then
         echo "ERROR: ADU_SRC_URI is not set. Cannot fetch commit hash."
         exit 1
     fi
-    
+
     # Extract repo URL and convert to HTTPS format for git ls-remote
     # Handle git://, https://, and http:// protocols
     REPO_URL="${ADU_SRC_URI}"
@@ -409,19 +409,19 @@ if [ "${ADU_GIT_COMMIT}" = "AUTOREV" ] || [ "${ADU_GIT_COMMIT}" = "HEAD" ] || [ 
     elif [[ "${REPO_URL}" == http://* ]]; then
         REPO_URL="https://${REPO_URL#http://}"
     fi
-    
+
     # Validate the URL format
     if [[ ! "${REPO_URL}" =~ ^https://[a-zA-Z0-9.-]+/[a-zA-Z0-9._/-]+$ ]]; then
         echo "ERROR: Invalid repository URL format: ${ADU_SRC_URI}"
         echo "Expected format: git://github.com/owner/repo or https://github.com/owner/repo"
         exit 1
     fi
-    
+
     echo "Fetching from: ${REPO_URL}"
-    
+
     # Fetch the commit hash for the specified branch
     ADU_GIT_COMMIT=$(git ls-remote "${REPO_URL}" "refs/heads/${ADU_GIT_BRANCH}" 2>&1 | grep -v "^fatal:" | cut -f1)
-    
+
     if [ -z "${ADU_GIT_COMMIT}" ]; then
         echo "ERROR: Failed to fetch commit hash for branch '${ADU_GIT_BRANCH}' from ${REPO_URL}"
         echo "Please check that:"
@@ -431,7 +431,7 @@ if [ "${ADU_GIT_COMMIT}" = "AUTOREV" ] || [ "${ADU_GIT_COMMIT}" = "HEAD" ] || [ 
         echo "Alternatively, specify --adu-git-commit manually."
         exit 1
     fi
-    
+
     echo "✓ Using ADU_GIT_COMMIT: ${ADU_GIT_COMMIT} (HEAD of branch '${ADU_GIT_BRANCH}')"
     export ADU_GIT_COMMIT
 fi
@@ -450,9 +450,9 @@ if [ "${USE_LOCAL_ADU_SOURCE}" = "1" ]; then
         ADU_LOCAL_SOURCE_DIR=$(realpath -m "${ADU_LOCAL_SOURCE_DIR}")
     fi
     ADU_LOCAL_SRC_DIR="${ADU_LOCAL_SOURCE_DIR}"
-    
+
     if [ ! -d "${ADU_LOCAL_SRC_DIR}" ]; then
-        echo "" 
+        echo ""
         echo "ERROR: USE_LOCAL_ADU_SOURCE=1 but source directory not found:"
         echo "  ${ADU_LOCAL_SRC_DIR}"
         echo ""
@@ -463,33 +463,33 @@ if [ "${USE_LOCAL_ADU_SOURCE}" = "1" ]; then
         echo ""
         exit 1
     fi
-    
-    echo "" 
+
+    echo ""
     echo "========================================"
     echo "Using LOCAL ADU source (Development Mode)"
     echo "========================================"
     echo "Source: ${ADU_LOCAL_SRC_DIR}"
-    
+
     # Show git status
     cd "${ADU_LOCAL_SRC_DIR}"
     CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
     CURRENT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
     echo "Branch: ${CURRENT_BRANCH}"
     echo "Commit: ${CURRENT_COMMIT}"
-    
+
     # Count uncommitted/untracked changes
     MODIFIED_COUNT=$(git diff --name-only 2>/dev/null | wc -l)
     STAGED_COUNT=$(git diff --cached --name-only 2>/dev/null | wc -l)
     UNTRACKED_COUNT=$(git ls-files --others --exclude-standard 2>/dev/null | wc -l)
     TOTAL_CHANGES=$((MODIFIED_COUNT + STAGED_COUNT + UNTRACKED_COUNT))
-    
+
     if [ "$TOTAL_CHANGES" -gt 0 ]; then
         echo "Status: 🔧 Development mode ($TOTAL_CHANGES local changes/new files)"
         echo "  Modified: $MODIFIED_COUNT | Staged: $STAGED_COUNT | Untracked: $UNTRACKED_COUNT"
     else
         echo "Status: Clean working directory"
     fi
-    
+
     echo ""
     echo "Note: GitHub fetch DISABLED - building from local source tree"
     echo "Note: Patches NOT applied (apply manually if needed)"
@@ -497,7 +497,7 @@ if [ "${USE_LOCAL_ADU_SOURCE}" = "1" ]; then
     echo "========================================"
     echo ""
     cd - > /dev/null
-    
+
     export USE_LOCAL_ADU_SOURCE
     export ADU_LOCAL_SOURCE_DIR
 fi
@@ -526,7 +526,7 @@ if [ "${USE_LOCAL_DO_SOURCE}" = "1" ]; then
     else
         DO_LOCAL_SOURCE_DIR=$(realpath -m "${DO_LOCAL_SOURCE_DIR}")
     fi
-    
+
     if [ ! -d "${DO_LOCAL_SOURCE_DIR}" ]; then
         echo ""
         echo "ERROR: USE_LOCAL_DO_SOURCE=1 but source directory not found:"
@@ -539,33 +539,33 @@ if [ "${USE_LOCAL_DO_SOURCE}" = "1" ]; then
         echo ""
         exit 1
     fi
-    
+
     echo ""
     echo "========================================"
     echo "Using LOCAL DO source (Development Mode)"
     echo "========================================"
     echo "Source: ${DO_LOCAL_SOURCE_DIR}"
-    
+
     # Show git status
     cd "${DO_LOCAL_SOURCE_DIR}"
     CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
     CURRENT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
     echo "Branch: ${CURRENT_BRANCH}"
     echo "Commit: ${CURRENT_COMMIT}"
-    
+
     # Count uncommitted/untracked changes
     MODIFIED_COUNT=$(git diff --name-only 2>/dev/null | wc -l)
     STAGED_COUNT=$(git diff --cached --name-only 2>/dev/null | wc -l)
     UNTRACKED_COUNT=$(git ls-files --others --exclude-standard 2>/dev/null | wc -l)
     TOTAL_CHANGES=$((MODIFIED_COUNT + STAGED_COUNT + UNTRACKED_COUNT))
-    
+
     if [ "$TOTAL_CHANGES" -gt 0 ]; then
         echo "Status: 🔧 Development mode ($TOTAL_CHANGES local changes/new files)"
         echo "  Modified: $MODIFIED_COUNT | Staged: $STAGED_COUNT | Untracked: $UNTRACKED_COUNT"
     else
         echo "Status: Clean working directory"
     fi
-    
+
     echo ""
     echo "Note: GitHub fetch DISABLED - building from local source tree"
     echo "Note: Patches NOT applied (apply manually if needed)"
@@ -573,7 +573,7 @@ if [ "${USE_LOCAL_DO_SOURCE}" = "1" ]; then
     echo "========================================"
     echo ""
     cd - > /dev/null
-    
+
     export USE_LOCAL_DO_SOURCE
     export DO_LOCAL_SOURCE_DIR
 fi
@@ -586,7 +586,7 @@ if [ "${USE_LOCAL_AZIOT_SDK_C_SOURCE}" = "1" ]; then
     else
         AZIOT_SDK_C_LOCAL_SOURCE_DIR=$(realpath -m "${AZIOT_SDK_C_LOCAL_SOURCE_DIR}")
     fi
-    
+
     if [ ! -d "${AZIOT_SDK_C_LOCAL_SOURCE_DIR}" ]; then
         echo ""
         echo "ERROR: USE_LOCAL_AZIOT_SDK_C_SOURCE=1 but source directory not found:"
@@ -599,33 +599,33 @@ if [ "${USE_LOCAL_AZIOT_SDK_C_SOURCE}" = "1" ]; then
         echo ""
         exit 1
     fi
-    
+
     echo ""
     echo "========================================"
     echo "Using LOCAL AZIOT_SDK_C source (Development Mode)"
     echo "========================================"
     echo "Source: ${AZIOT_SDK_C_LOCAL_SOURCE_DIR}"
-    
+
     # Show git status
     cd "${AZIOT_SDK_C_LOCAL_SOURCE_DIR}"
     CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
     CURRENT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
     echo "Branch: ${CURRENT_BRANCH}"
     echo "Commit: ${CURRENT_COMMIT}"
-    
+
     # Count uncommitted/untracked changes
     MODIFIED_COUNT=$(git diff --name-only 2>/dev/null | wc -l)
     STAGED_COUNT=$(git diff --cached --name-only 2>/dev/null | wc -l)
     UNTRACKED_COUNT=$(git ls-files --others --exclude-standard 2>/dev/null | wc -l)
     TOTAL_CHANGES=$((MODIFIED_COUNT + STAGED_COUNT + UNTRACKED_COUNT))
-    
+
     if [ "$TOTAL_CHANGES" -gt 0 ]; then
         echo "Status: 🔧 Development mode ($TOTAL_CHANGES local changes/new files)"
         echo "  Modified: $MODIFIED_COUNT | Staged: $STAGED_COUNT | Untracked: $UNTRACKED_COUNT"
     else
         echo "Status: Clean working directory"
     fi
-    
+
     echo ""
     echo "Note: GitHub fetch DISABLED - building from local source tree"
     echo "Note: Patches NOT applied (apply manually if needed)"
@@ -633,7 +633,7 @@ if [ "${USE_LOCAL_AZIOT_SDK_C_SOURCE}" = "1" ]; then
     echo "========================================"
     echo ""
     cd - > /dev/null
-    
+
     export USE_LOCAL_AZIOT_SDK_C_SOURCE
     export AZIOT_SDK_C_LOCAL_SOURCE_DIR
 fi
@@ -667,15 +667,15 @@ if [ "${USE_LOCAL_ADU_DELTA_SOURCE}" = "1" ] || [ -n "${ADU_DELTA_LOCAL_SRC}" ];
     else
         ADU_DELTA_LOCAL_SRC=$(realpath -m "${ADU_DELTA_LOCAL_SOURCE_DIR}")
     fi
-    
+
     # Check if directory exists
     if [ ! -d "${ADU_DELTA_LOCAL_SRC}" ]; then
         echo "Local ADU Delta source directory does not exist: ${ADU_DELTA_LOCAL_SRC}"
         echo "Cloning from ${ADU_DELTA_SRC_URI} branch ${ADU_DELTA_GIT_BRANCH}..."
-        
+
         # Create parent directory if needed
         mkdir -p "$(dirname "${ADU_DELTA_LOCAL_SRC}")"
-        
+
         # Clone the repository
         CLONE_URL="${ADU_DELTA_SRC_URI}"
         # Convert gitsm:// to https:// for cloning
@@ -684,37 +684,37 @@ if [ "${USE_LOCAL_ADU_DELTA_SOURCE}" = "1" ] || [ -n "${ADU_DELTA_LOCAL_SRC}" ];
         elif [[ "${CLONE_URL}" == git://* ]]; then
             CLONE_URL="https://${CLONE_URL#git://}"
         fi
-        
+
         git clone --branch "${ADU_DELTA_GIT_BRANCH}" "${CLONE_URL}" "${ADU_DELTA_LOCAL_SRC}"
-        
+
         if [ $? -ne 0 ]; then
             echo "ERROR: Failed to clone ADU Delta repository"
             exit 1
         fi
-        
+
         echo "✓ Cloned ADU Delta to ${ADU_DELTA_LOCAL_SRC}"
     else
         echo "Using local ADU Delta source: ${ADU_DELTA_LOCAL_SRC}"
-        
+
         # Show current branch and status
         cd "${ADU_DELTA_LOCAL_SRC}"
         CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
         CURRENT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
         echo "  Branch: ${CURRENT_BRANCH}"
         echo "  Commit: ${CURRENT_COMMIT}"
-        
+
         # Check for uncommitted changes
         if ! git diff-index --quiet HEAD -- 2>/dev/null; then
             echo "  ⚠️  WARNING: Local source has uncommitted changes"
         fi
         cd - > /dev/null
     fi
-    
+
     # Override SRC_URI to use local source
     export ADU_DELTA_SRC_URI="file://${ADU_DELTA_LOCAL_SRC}"
     export ADU_DELTA_LOCAL_SRC
     export ADU_DELTA_SKIP_PATCHES
-    
+
     if [ "${ADU_DELTA_SKIP_PATCHES}" = "1" ]; then
         echo "ADU Delta will be built from local source (patches will be skipped): ${ADU_DELTA_LOCAL_SRC}"
     else
@@ -799,7 +799,7 @@ if [[ $REBUILD == 'true' ]]; then
     echo "⚠️  This is a DESTRUCTIVE operation and will require a complete rebuild!"
     echo "   Consider using '-c' (clean) instead to clean specific recipes only."
     echo ""
-    
+
     if [[ $UNATTENDED == 'false' ]]; then
         read -p "Are you sure you want to proceed? (yes/no): " -r
         echo
@@ -810,7 +810,7 @@ if [[ $REBUILD == 'true' ]]; then
     else
         echo "Running in unattended mode - proceeding without confirmation."
     fi
-    
+
     echo "Performing full rebuild - removing build directory contents (preserving sstate cache)..."
     # Remove everything except sstate-cache if it exists
     find $BUILD_DIR -mindepth 1 -maxdepth 1 ! -name 'sstate-cache' -exec rm -rf {} + 2>/dev/null || true
@@ -869,10 +869,10 @@ source $ROOT_DIR/poky/oe-init-build-env $BUILD_DIR
 if [[ -n "$CLEAN_RECIPES" ]]; then
     echo "🧹 Cleaning specific recipes: $CLEAN_RECIPES"
     echo ""
-    
+
     # Convert comma-separated list to array
     IFS=',' read -ra RECIPE_ARRAY <<< "$CLEAN_RECIPES"
-    
+
     # Clean all specified recipes at once - BitBake can handle multiple targets
     echo "Cleaning recipes..."
     echo "  🧹 Cleaning: ${RECIPE_ARRAY[*]}"
@@ -880,7 +880,7 @@ if [[ -n "$CLEAN_RECIPES" ]]; then
         echo "❌ ERROR: Failed to clean recipes: ${RECIPE_ARRAY[*]}" >&2
         exit 1
     }
-    
+
     echo ""
     echo "✅ All recipes cleaned successfully!"
     exit 0
@@ -890,10 +890,10 @@ fi
 if [[ -n "$REBUILD_RECIPES" ]]; then
     echo "🔄 Rebuilding specific recipes: $REBUILD_RECIPES"
     echo ""
-    
+
     # Convert comma-separated list to array
     IFS=',' read -ra RECIPE_ARRAY <<< "$REBUILD_RECIPES"
-    
+
     # First, clean all specified recipes at once - BitBake can handle multiple targets
     echo "Step 1/2: Cleaning recipes..."
     echo "  🧹 Cleaning: ${RECIPE_ARRAY[*]}"
@@ -901,7 +901,7 @@ if [[ -n "$REBUILD_RECIPES" ]]; then
         echo "❌ ERROR: Failed to clean recipes: ${RECIPE_ARRAY[*]}" >&2
         exit 1
     }
-    
+
     echo ""
     echo "✅ All recipes cleaned successfully"
     echo ""
@@ -912,7 +912,7 @@ if [[ -n "$REBUILD_RECIPES" ]]; then
         echo "❌ ERROR: Failed to build recipes: ${RECIPE_ARRAY[*]}" >&2
         exit 1
     }
-    
+
     echo ""
     echo "✅ All recipes rebuilt successfully!"
     exit 0
@@ -922,10 +922,10 @@ fi
 if [[ -n "$BUILD_TARGETS" ]]; then
     echo "🔨 Building specific targets: $BUILD_TARGETS"
     echo ""
-    
+
     # Convert comma-separated list to array
     IFS=',' read -ra TARGET_ARRAY <<< "$BUILD_TARGETS"
-    
+
     for target in "${TARGET_ARRAY[@]}"; do
         target=$(echo "$target" | xargs)  # Trim whitespace
         echo "  🔨 Building: $target"
@@ -934,7 +934,7 @@ if [[ -n "$BUILD_TARGETS" ]]; then
             exit 1
         }
     done
-    
+
     echo ""
     echo "✅ All targets built successfully!"
     exit 0
@@ -961,11 +961,11 @@ elif [[ $BUILD_UBOOT_ONLY == 1 ]]; then
     echo "Building U-Boot boot scripts (normal and debug versions)..."
     echo "Enabling debug script build..."
     export BUILD_UBOOT_DEBUG_SCRIPT='1'
-    
+
     # Clean and rebuild rpi-u-boot-scr
     bitbake $VERBOSE -c cleansstate rpi-u-boot-scr
     bitbake $VERBOSE rpi-u-boot-scr
-    
+
     if [ $? -eq 0 ]; then
         echo ""
         echo "✓ U-Boot boot scripts built successfully!"
@@ -989,7 +989,7 @@ elif [[ $BUILD_BASE_IMAGE_ONLY == 1 ]]; then
     echo "Update images (SWU) and delta artifacts will NOT be built."
     echo ""
     bitbake $VERBOSE adu-base-image
-    
+
     if [ $? -eq 0 ]; then
         echo ""
         echo "✓ Base image built successfully!"
@@ -1020,7 +1020,7 @@ else
         echo "  ✗ Remove all generated images and SWU files"
         echo "  ✓ Preserve sstate cache (for faster rebuilds)"
         echo ""
-        
+
         if [[ $UNATTENDED == 'false' ]]; then
             read -p "Do you want to proceed? (yes/no): " -r
             echo
@@ -1031,7 +1031,7 @@ else
         else
             echo "Running in unattended mode - proceeding without confirmation."
         fi
-        
+
         echo "Performing clean build - removing all build artifacts..."
         bitbake $VERBOSE -c cleanall  -f \
             azure-device-update \
@@ -1041,7 +1041,7 @@ else
             deliveryoptimization-agent-service \
             swupdate \
             core-image-full-cmdline \
-            core-image-minimal 
+            core-image-minimal
 
         bitbake $VERBOSE -c cleanall  -f \
             adu-base-image \
@@ -1065,7 +1065,7 @@ else
         echo "This will clean and rebuild the base image and all dependent artifacts."
         exit 1
     fi
-    
+
     if [[ $WITH_FEATURE_DELTA_UPDATE == '1' ]]; then
         echo "Building delta update artifacts (v1→v2, v2→v3, v1→v3)..."
         bitbake $VERBOSE adu-delta-image
