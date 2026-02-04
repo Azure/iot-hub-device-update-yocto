@@ -387,9 +387,9 @@ if [ -n "${ADU_GIT_BRANCH}" ]; then
     export ADU_GIT_BRANCH
 fi
 
-# if ADU_GIT_COMMIT is not set and not equal "AUTOREV", then fetch the HEAD commit of the branch
-if [ "${ADU_GIT_COMMIT}" = "AUTOREV" ]; then
-    echo "ADU_GIT_COMMIT is set to AUTOREV, using latest commit."
+# if ADU_GIT_COMMIT is not set and not equal "AUTOREV" or "DEFAULT", then fetch the HEAD commit of the branch
+if [ "${ADU_GIT_COMMIT}" = "AUTOREV" ] || [ "${ADU_GIT_COMMIT}" = "DEFAULT" ]; then
+    echo "ADU_GIT_COMMIT is set to ${ADU_GIT_COMMIT}, using latest commit from branch."
     export ADU_GIT_COMMIT=""
 elif [ -z "${ADU_GIT_COMMIT}" ]; then
     echo "ADU_GIT_COMMIT not set, fetching HEAD commit hash for branch '${ADU_GIT_BRANCH}'..."
@@ -509,7 +509,11 @@ if [ -n "${DO_GIT_BRANCH}" ]; then
     export DO_GIT_BRANCH
 fi
 
-if [ -n "${DO_GIT_COMMIT}" ]; then
+# Handle DEFAULT keyword for DO_GIT_COMMIT
+if [ "${DO_GIT_COMMIT}" = "DEFAULT" ]; then
+    echo "DO_GIT_COMMIT is set to DEFAULT, using latest commit from branch."
+    export DO_GIT_COMMIT=""
+elif [ -n "${DO_GIT_COMMIT}" ]; then
     export DO_GIT_COMMIT
 fi
 
@@ -641,7 +645,11 @@ if [ -n "${ADU_DELTA_GIT_BRANCH}" ]; then
     export ADU_DELTA_GIT_BRANCH
 fi
 
-if [ -n "${ADU_DELTA_GIT_COMMIT}" ]; then
+# Handle DEFAULT keyword for ADU_DELTA_GIT_COMMIT
+if [ "${ADU_DELTA_GIT_COMMIT}" = "DEFAULT" ]; then
+    echo "ADU_DELTA_GIT_COMMIT is set to DEFAULT, using latest commit from branch."
+    export ADU_DELTA_GIT_COMMIT=""
+elif [ -n "${ADU_DELTA_GIT_COMMIT}" ]; then
     export ADU_DELTA_GIT_COMMIT
 fi
 
