@@ -387,12 +387,13 @@ if [ -n "${ADU_GIT_BRANCH}" ]; then
     export ADU_GIT_BRANCH
 fi
 
-# if ADU_GIT_COMMIT is not set and not equal "AUTOREV" or "DEFAULT", then fetch the HEAD commit of the branch
-if [ "${ADU_GIT_COMMIT}" = "AUTOREV" ] || [ "${ADU_GIT_COMMIT}" = "DEFAULT" ]; then
-    echo "ADU_GIT_COMMIT is set to ${ADU_GIT_COMMIT}, using latest commit from branch."
-    export ADU_GIT_COMMIT=""
-elif [ -z "${ADU_GIT_COMMIT}" ]; then
-    echo "ADU_GIT_COMMIT not set, fetching HEAD commit hash for branch '${ADU_GIT_BRANCH}'..."
+# if ADU_GIT_COMMIT is not set or equals "AUTOREV" or "HEAD", then fetch the HEAD commit of the branch
+if [ "${ADU_GIT_COMMIT}" = "AUTOREV" ] || [ "${ADU_GIT_COMMIT}" = "HEAD" ] || [ -z "${ADU_GIT_COMMIT}" ]; then
+    if [ "${ADU_GIT_COMMIT}" = "AUTOREV" ] || [ "${ADU_GIT_COMMIT}" = "HEAD" ]; then
+        echo "ADU_GIT_COMMIT is set to ${ADU_GIT_COMMIT}, fetching HEAD commit from branch '${ADU_GIT_BRANCH}'..."
+    else
+        echo "ADU_GIT_COMMIT not set, fetching HEAD commit hash for branch '${ADU_GIT_BRANCH}'..."
+    fi
     
     # Validate ADU_SRC_URI is set
     if [ -z "${ADU_SRC_URI}" ]; then
@@ -509,9 +510,9 @@ if [ -n "${DO_GIT_BRANCH}" ]; then
     export DO_GIT_BRANCH
 fi
 
-# Handle DEFAULT keyword for DO_GIT_COMMIT
-if [ "${DO_GIT_COMMIT}" = "DEFAULT" ]; then
-    echo "DO_GIT_COMMIT is set to DEFAULT, using latest commit from branch."
+# Handle HEAD keyword for DO_GIT_COMMIT
+if [ "${DO_GIT_COMMIT}" = "HEAD" ]; then
+    echo "DO_GIT_COMMIT is set to HEAD, using latest commit from branch."
     export DO_GIT_COMMIT=""
 elif [ -n "${DO_GIT_COMMIT}" ]; then
     export DO_GIT_COMMIT
@@ -645,9 +646,9 @@ if [ -n "${ADU_DELTA_GIT_BRANCH}" ]; then
     export ADU_DELTA_GIT_BRANCH
 fi
 
-# Handle DEFAULT keyword for ADU_DELTA_GIT_COMMIT
-if [ "${ADU_DELTA_GIT_COMMIT}" = "DEFAULT" ]; then
-    echo "ADU_DELTA_GIT_COMMIT is set to DEFAULT, using latest commit from branch."
+# Handle HEAD keyword for ADU_DELTA_GIT_COMMIT
+if [ "${ADU_DELTA_GIT_COMMIT}" = "HEAD" ]; then
+    echo "ADU_DELTA_GIT_COMMIT is set to HEAD, using latest commit from branch."
     export ADU_DELTA_GIT_COMMIT=""
 elif [ -n "${ADU_DELTA_GIT_COMMIT}" ]; then
     export ADU_DELTA_GIT_COMMIT
