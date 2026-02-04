@@ -182,8 +182,17 @@ while [[ $1 != "" ]]; do
         ;;
     --adu-embed-test-root-keys)
         shift
-        ADU_EMBED_TEST_ROOT_KEYS =$1
-        echo -e "ADU_EMBED_TEST_ROOT_KEYS:$ADU_EMBED_TEST_ROOT_KEYS "
+        # Accept 1/0, true/false, True/False
+        case "$1" in
+            1|true|True|TRUE) ADU_EMBED_TEST_ROOT_KEYS=1 ;;
+            0|false|False|FALSE) ADU_EMBED_TEST_ROOT_KEYS=0 ;;
+            *) 
+                echo "ERROR: Invalid value for --adu-embed-test-root-keys: $1"
+                echo "Valid values: 1, 0, true, false"
+                exit 1
+                ;;
+        esac
+        echo "ADU_EMBED_TEST_ROOT_KEYS: $ADU_EMBED_TEST_ROOT_KEYS"
         ;;
     --do-git-branch)
         shift
