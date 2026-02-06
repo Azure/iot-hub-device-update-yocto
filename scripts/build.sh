@@ -90,6 +90,13 @@ Usage: build.sh [options...]
     --show-recipes                   Runs bitbake-layers show-recipes.
                                      e.g. script.sh --show-recipes | grep -i azure
 
+    --nuget-source <source>          Set NuGet package source for diffgentool build.
+                                     Options:
+                                       microsoft-internal  - Use Microsoft internal ADU-Diffs feed
+                                       nuget-org          - Use public nuget.org (default)
+                                       <custom-url>       - Use custom NuGet feed URL
+                                     Example: --nuget-source microsoft-internal
+
     -o, --out-dir <build_dir>        Set the build output directory. Default is build.
     --verbose                        Add -v to bitbake cmdline for verbose output.
 
@@ -135,6 +142,9 @@ BUILD_UBOOT_DEBUG_SCRIPT='0'
 # Root password (empty by default - no password change)
 ROOT_PASSWORD=''
 ROOT_PASSWORD_SHA512=''
+
+# NuGet source (empty by default - uses nuget.org)
+NUGET_SOURCE=''
 
 # vars for cmdline arg parsing
 BUILD_DIR=$ROOT_DIR/build
@@ -243,6 +253,21 @@ while [[ $1 != "" ]]; do
         ;;
     --show-recipes)
         SHOW_RECIPES=1
+        ;;
+    --nuget-source)
+        shift
+        NUGET_SOURCE="$1"
+        case "$NUGET_SOURCE" in
+            microsoft-internal|nuget-org)
+                ;; # Valid values
+            *)
+                # Assume it's a custom URL
+                if [[ ! "$NUGET_SOURCE" =~ ^https?:// ]]; then
+                    echo "ERROR: --nuget-source must be 'microsoft-internal', 'nuget-org', or a valid https:// URL"
+                    exit 1
+                fi
+                ;;
+        esac
         ;;
     --adu-generation)
         shift
@@ -853,9 +878,15 @@ export BUILD_UBOOT_DEBUG_SCRIPT
 
 export WITH_ADUC_TESTS=1
 
+# Export NuGet source configuration (if set)
+if [[ -n "$NUGET_SOURCE" ]]; then
+    export NUGET_SOURCE
+    echo "NuGet Source: $NUGET_SOURCE"
+fi
+
 # export TOP_DIR=$ROOT_DIR/yocto
 # We need to tell bitbake about any env vars it should read in.
-export BB_ENV_PASSTHROUGH_ADDITIONS="$BB_ENV_PASSTHROUGH_ADDITIONS ADUC_USE_TEST_ROOT_KEYS ADU_GENERATION ADU_GIT_BRANCH ADU_SRC_URI ADU_GIT_COMMIT DO_GIT_BRANCH DO_SRC_URI DO_GIT_COMMIT ADU_DELTA_GIT_BRANCH ADU_DELTA_SRC_URI ADU_DELTA_GIT_COMMIT ADU_DELTA_LOCAL_SRC ADU_DELTA_SKIP_PATCHES BUILD_TYPE ADU_SOFTWARE_VERSION ADUC_PUBLIC_KEY ADUC_PRIVATE_KEY ADUC_PRIVATE_KEY_PASSWORD SSTATE_DIR BB_NUMBER_THREADS PARALLEL_MAKE WITH_FEATURE_DELTA_UPDATE ENABLE_WIFI_BLUETOOTH BUILD_UBOOT_DEBUG_SCRIPT USE_LOCAL_ADU_SOURCE ADU_LOCAL_SOURCE_DIR USE_LOCAL_ADU_DELTA_SOURCE ADU_DELTA_LOCAL_SOURCE_DIR USE_LOCAL_DO_SOURCE DO_LOCAL_SOURCE_DIR USE_LOCAL_AZIOT_SDK_C_SOURCE AZIOT_SDK_C_LOCAL_SOURCE_DIR ADU_ROOT_PASSWD WITH_ADUC_TESTS"
+export BB_ENV_PASSTHROUGH_ADDITIONS="$BB_ENV_PASSTHROUGH_ADDITIONS ADUC_USE_TEST_ROOT_KEYS ADU_GENERATION ADU_GIT_BRANCH ADU_SRC_URI ADU_GIT_COMMIT DO_GIT_BRANCH DO_SRC_URI DO_GIT_COMMIT ADU_DELTA_GIT_BRANCH ADU_DELTA_SRC_URI ADU_DELTA_GIT_COMMIT ADU_DELTA_LOCAL_SRC ADU_DELTA_SKIP_PATCHES BUILD_TYPE ADU_SOFTWARE_VERSION ADUC_PUBLIC_KEY ADUC_PRIVATE_KEY ADUC_PRIVATE_KEY_PASSWORD SSTATE_DIR BB_NUMBER_THREADS PARALLEL_MAKE WITH_FEATURE_DELTA_UPDATE ENABLE_WIFI_BLUETOOTH BUILD_UBOOT_DEBUG_SCRIPT USE_LOCAL_ADU_SOURCE ADU_LOCAL_SOURCE_DIR USE_LOCAL_ADU_DELTA_SOURCE ADU_DELTA_LOCAL_SOURCE_DIR USE_LOCAL_DO_SOURCE DO_LOCAL_SOURCE_DIR USE_LOCAL_AZIOT_SDK_C_SOURCE AZIOT_SDK_C_LOCAL_SOURCE_DIR ADU_ROOT_PASSWD WITH_ADUC_TESTS NUGET_SOURCE NUGET_CONFIG_PATH"
 
 echo "Initializing Yocto/OpenEmbedded build environment..."
 echo "  Build directory: $BUILD_DIR"
