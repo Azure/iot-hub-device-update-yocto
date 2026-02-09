@@ -1,53 +1,252 @@
-# Building a Custom Linux-based System with Device Update for IotHub Agent using the Yocto Project
-> **DISCLAIMER:**  
+# Azure Device Update for IoT Hub - Yocto Integration Reference
+> **DISCLAIMER:**
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ## Introduction
 
-This repository is a tool for experimenting with the integration of Device Update with a Yocto build system. Within this repo there are scripts for helping with builds, a directory structure for supplying keys to the swupdate signing process, and the azurepipelines definitions which can be used for setting up an Azure Dev Ops pipeline for generating the proof of concept image. 
+This repository serves as a **reference implementation** for device builders who want to integrate **Azure Device Update (ADU)** for IoT Hub into their custom Linux-based operating systems built with the Yocto Project. It demonstrates how to enable secure, reliable over-the-air (OTA) firmware updates using **A/B partition rootfs update strategies** for embedded Linux devices.
 
-None of the instructions, Azure Pipelines, scripts, or process described here is intended for production use. Do not use this repository as a basis for a production pipeline for integrating images. There are no promises made about the security and stability of the pipeline held within this repository. 
+### What This Repository Provides
 
-The repository and instructions create an image for the RaspberryPi 4 which can run script and image based updates using Device Update for IoT Hub. It's just to give you a taste of the power and utility of Device Update for IoT Hub.
+This repository offers high-level guidance and reference materials for integrating Azure Device Update into your custom embedded Linux OS:
 
-For more information about the Device Update for IoT Hub, see the link to the source code of [Device Update Agent](https://github.com/Azure/iot-hub-device-update)
+- **Overview of A/B firmware update flow** — Understanding how dual-partition rootfs updates work, including boot switching, health validation, and automatic rollback mechanisms
+- **Reference OS image build guide** — High-level instructions for building an ADU-enabled Yocto image for Raspberry Pi 4
+- **Meta-layer overview** — Explanation of each Yocto layer's purpose, including Microsoft-provided ADU layers and third-party dependencies
+- **Build scripts and tooling** — Helper scripts to automate layer cloning, dependency installation, and image compilation
+- **Pipeline examples** — CI/CD templates demonstrating automated build workflows
+- **Delta update capabilities** — Introduction to bandwidth-efficient OTA updates using binary diff/patch
 
-See [why we chose Raspberry Pi 4](#why-raspberry-pi-4) as the reference platform below.
+### Important Notes
+
+⚠️ **This is a reference implementation, NOT production-ready**:
+- The Raspberry Pi 4 implementation (`meta-raspberrypi-adu`) is intended as a **learning example** and **reference architecture**
+- It demonstrates concepts and patterns that can be adapted to your custom hardware
+- **Do not deploy this implementation to production devices without significant hardening and customization**
+- Each hardware platform requires specific adaptations for bootloader integration, partition management, and recovery mechanisms
+
+For more information about Azure Device Update for IoT Hub, see the [Device Update Agent source code](https://github.com/Azure/iot-hub-device-update/tree/feature/vnext-delta).
+
+See [Why Raspberry Pi 4?](#why-raspberry-pi-4) for rationale behind the reference platform choice.
 
 ## Table of Contents
 
-- [Yocto Layers Overview](#yocto-layers-overview)
+- [Introduction](#introduction)
+- [A/B Rootfs Update Architecture Overview](#ab-rootfs-update-architecture-overview)
+  - [What is A/B Update?](#what-is-ab-update)
+  - [Industry Implementation Guidelines](#industry-implementation-guidelines)
+  - [Microsoft Reference Implementation](#microsoft-reference-implementation)
+- [Microsoft-Provided Yocto Layers](#microsoft-provided-yocto-layers)
+- [Third-Party Dependency Layers](#third-party-dependency-layers)
 - [Quick Start](#quick-start)
 - [Prerequisites](#prerequisites)
 - [Delta Updates](#delta-updates-binary-diffpatch)
 - [Software Bill of Materials (SBOM)](#software-bill-of-materials-sbom)
 - [Build Pipelines](#build-pipelines-status)
-- [Using Your Own Board](#using-your-own-board-and-guidance-for-production-images)
+- [Porting to Your Own Hardware](#porting-to-your-own-hardware)
 - [Why Raspberry Pi 4?](#why-raspberry-pi-4)
 
-## Yocto Layers Overview
+## A/B Rootfs Update Architecture Overview
 
-This repository integrates multiple Yocto/OpenEmbedded layers for building ADU-enabled images. Each layer has comprehensive documentation - please refer to the individual layer README files for detailed information.
+### What is A/B Update?
 
-### ADU-Specific Layers
+**A/B update** (also called dual-bank or dual-copy update) is a robust firmware update strategy that maintains **two independent copies of the root filesystem** on the device. At any given time:
+- **Active partition (Slot A or B)**: Currently running the operating system
+- **Inactive partition (Slot B or A)**: Available for receiving updates
 
-| Layer | Purpose | Key Components | Documentation |
-|-------|---------|----------------|---------------|
-| **meta-azure-device-update** | Core ADU agent and Azure SDK infrastructure | ADU agent, Azure IoT SDK C, Azure SDK for C++, Delivery Optimization agent/SDK, systemd services | [README](yocto/meta-azure-device-update/README.md), [OOBE Service](yocto/meta-azure-device-update/docs/README-ADU-OOBE-SERVICE.md) |
-| **meta-iot-hub-device-update-delta** | Delta update processing library | `libadudiffapi.so`, native diffgen tools, applydiff utility, e2fsprogs/jsoncpp patches | [README](yocto/meta-iot-hub-device-update-delta/README.md) |
-| **meta-raspberrypi-adu** | Raspberry Pi 4 reference implementation | A/B partition management, U-Boot scripts, boot health validation, SWUpdate handlers | [README](yocto/meta-raspberrypi-adu/README.md), [A/B Architecture](yocto/meta-raspberrypi-adu/ADU-AB-UPDATE-ARCHITECTURE-GUIDE.md), [Porting Guide](yocto/meta-raspberrypi-adu/PORTING-GUIDE.md) |
-| **meta-azure-device-update-samples** | Board-agnostic samples and delta generation workflow | Versioned update images (v1/v2/v3), automated delta generation, test packages, import manifests | [README](yocto/meta-azure-device-update-samples/README.md) |
+During an OTA update:
+1. New firmware is written to the **inactive partition** while the system continues running
+2. Bootloader switches to the **newly updated partition** on next reboot
+3. Boot health checks verify the system is functional
+4. If verification fails, bootloader automatically **rolls back** to the previous working partition
 
-### Third-Party Dependency Layers
+This approach provides:
+- **Zero-downtime updates**: System remains operational during download/installation
+- **Atomic updates**: Either fully succeeds or fully rolls back—no partial/broken states
+- **Fast recovery**: Instant rollback to last-known-good partition on failure
+- **Safe experimentation**: Test updates without risking device bricking
+
+### Industry Implementation Guidelines
+
+Implementing A/B updates for production embedded Linux devices requires careful design across multiple system components:
+
+#### 1. Partition Layout
+
+A typical A/B partition scheme includes:
+
+| Partition | Purpose | Size Considerations |
+|-----------|---------|-------------------|
+| **Boot** | Bootloader, kernel, device trees | Fixed size (typically 64-256 MB) |
+| **RootFS A** | Primary root filesystem (Slot A) | Full OS image size + ~10% headroom |
+| **RootFS B** | Secondary root filesystem (Slot B) | Same as RootFS A |
+| **Data** | User data, persistent config, logs | Device-specific requirements |
+| **Recovery** (optional) | Minimal recovery environment | Minimal size (100-500 MB) |
+
+**Storage overhead**: A/B updates require approximately **2.2-2.5x** the rootfs size compared to single-partition designs.
+
+**Partition alignment**: Use 4 MB boundaries for optimal flash wear-leveling on eMMC/SD cards.
+
+#### 2. Bootloader Requirements
+
+The bootloader is **critical** for A/B update reliability. It must support:
+
+| Feature | Purpose | Example Implementation |
+|---------|---------|----------------------|
+| **Dual-boot selection** | Choose between Slot A/B | U-Boot `boot_partition` variable (e.g., "rootA", "rootB") |
+| **Boot attempt counter** | Track consecutive failed boots | U-Boot `boot_attempts` variable (incremented per boot) |
+| **Rollback trigger** | Revert to previous slot on failure | U-Boot logic comparing `boot_attempts` vs `max_boot_attempts` |
+| **Update status flags** | Track update validation state | U-Boot `upgrade_available` flag and `boot_result` status |
+| **Last known good tracking** | Remember last successful partition | U-Boot `last_known_good_partition` variable |
+| **Secure boot** (production) | Verify kernel/rootfs signatures | U-Boot Verified Boot (FIT images) or custom solution |
+
+> **Note:** The "Example Implementation" column shows actual variable names from the Raspberry Pi 4 reference implementation in `meta-raspberrypi-adu`. Your bootloader may use different variable names, state values, or mechanisms to achieve the same functionality.
+
+**Common bootloaders with A/B support**:
+- **U-Boot** (recommended for embedded Linux): Flexible scripting, wide hardware support
+- **GRUB**: x86/ARM platforms, supports BLS (Boot Loader Specification)
+- **Barebox**: Alternative to U-Boot, strong A/B support
+- **Custom bootloaders**: Hardware-specific implementations (e.g., Qualcomm LK, TI MLO)
+
+#### 3. Boot Health Validation
+
+After switching to a new partition, the system must **prove** it's healthy before committing the update:
+
+**Recommended validation stages** (customize based on your device requirements):
+
+1. **Early boot checks** (in bootloader):
+   - Verify filesystem integrity (ext4 `e2fsck`, SquashFS checksums)
+   - Check kernel/DTB signatures (secure boot)
+
+2. **System initialization checks** (during systemd startup):
+   - Critical services started successfully
+   - Network connectivity established
+   - Required hardware devices present
+
+3. **Application-level checks**:
+   - ADU agent successfully connects to IoT Hub
+   - Application-specific health checks pass
+
+> **Note:** These validation stages are recommendations. You can add additional checks specific to your device (e.g., sensor readings, peripheral functionality, database connectivity, license validation) or remove checks that don't apply to your use case. The key requirement is that your system can reliably determine whether the new partition is functional before committing the update.
+
+**Validation timeout and rollback mechanism**:
+- The **OS-level boot validation service** enforces a time-based timeout (default: 5 minutes via systemd `TimeoutStartSec`)
+- If validation doesn't complete within this window, the service fails and the system reboots
+- The **bootloader** tracks failed boot attempts using a counter (`boot_attempts`)
+- After consecutive failures exceed the threshold (default: 5 attempts via `max_boot_attempts`), the bootloader automatically rolls back to the last-known-good partition
+- This two-tier approach ensures reliable recovery: immediate timeout detection at the OS level, followed by count-based rollback at the bootloader level
+
+#### 4. Atomic Update Mechanisms
+
+To ensure reliability, updates must be **atomic**—either fully applied or fully rolled back:
+
+- **SWUpdate** (chosen for demonstration purposes): Supports compressed images.
+- **RAUC**: Alternative update framework with bundle encryption and adaptive updates
+- **OSTree**: Git-like rootfs versioning (used by Fedora IoT, Automotive Grade Linux)
+- **Custom solutions**: Block-level imaging with integrity verification
+
+#### 5. Persistent Data Handling
+
+Separate **user data** from the root filesystem to avoid data loss during updates:
+
+- **Dedicated data partition**: Mount at `/data`, `/var/lib`, or custom paths
+- **Overlay filesystems**: Use `overlayfs` to merge read-only rootfs with writable data layer
+- **Bind mounts**: Map persistent directories (e.g., `/etc`, `/home`) to data partition
+- **Database migrations**: Handle schema changes gracefully across updates
+
+### Microsoft Reference Implementation
+
+The **`meta-raspberrypi-adu`** layer included in this repository demonstrates a **complete A/B update implementation** for Raspberry Pi 4. It is provided as a **reference architecture** to help developers understand how to integrate ADU into their own hardware platforms.
+
+#### What meta-raspberrypi-adu Demonstrates
+
+| Component | Implementation Details | Purpose |
+|-----------|----------------------|---------|
+| **Partition Layout** | 3-partition scheme: boot, rootfs_a, rootfs_b | Dual-bank rootfs strategy |
+| **U-Boot Integration** | Custom boot scripts with health validation | A/B selection and rollback logic |
+| **SWUpdate Handler** | Atomic image updates with streaming | Reliable OTA mechanism |
+| **ADU Agent Integration** | systemd service for IoT Hub connectivity | Cloud-orchestrated updates |
+| **Boot Health Checks** | Systemd targets for validation | Automatic rollback on failure |
+
+**Key files to review**:
+- [A/B Update Architecture Guide](https://github.com/Azure/meta-raspberrypi-adu/blob/feature/vnext-delta/ADU-AB-UPDATE-ARCHITECTURE-GUIDE.md)
+- [Porting Guide](https://github.com/Azure/meta-raspberrypi-adu/blob/feature/vnext-delta/PORTING-GUIDE.md)
+- [README.md](https://github.com/Azure/meta-raspberrypi-adu/blob/feature/vnext-delta/README.md)
+
+#### ⚠️ Production Deployment Warning
+
+**The `meta-raspberrypi-adu` implementation is NOT suitable for production use without significant modifications:**
+
+1. **Security hardening required**:
+   - Replace example signing keys with production HSM-backed keys
+   - Enable U-Boot verified boot (FIT image signatures)
+   - Implement secure storage for IoT Hub credentials
+   - Harden SSH access and disable debug interfaces
+
+2. **Hardware-specific adaptations needed**:
+   - Raspberry Pi's SD card storage is unsuitable for industrial/automotive use
+   - Replace with eMMC, SPI NOR, or NAND flash with wear-leveling
+   - Adjust partition sizes for your application footprint
+   - Implement watchdog timer integration for recovery
+
+3. **Reliability enhancements required**:
+   - Add power-loss recovery mechanisms
+   - Implement factory reset capabilities
+   - Enhance logging and diagnostics for field troubleshooting
+   - Add redundancy for critical boot components
+
+4. **Regulatory compliance**:
+   - Validate against industry standards (IEC 62443, ISO 26262 for automotive)
+   - Perform extensive stress testing (power-loss, network interruption, flash wear)
+   - Implement audit logging for security certifications
+
+**Recommendation**: Treat `meta-raspberrypi-adu` as a **learning tool** and **architectural blueprint**. Use it to understand the concepts, then design a production implementation tailored to your hardware, security requirements, and operational environment.
+
+For detailed porting guidance, see [Porting to Your Own Hardware](#porting-to-your-own-hardware).
+
+## Microsoft-Provided Yocto Layers
+
+These layers are developed and maintained by Microsoft to enable Azure Device Update integration. **All Microsoft layers should use the `feature/vnext-delta` branch** for the latest delta update capabilities:
+
+| Layer | Purpose | Branch | Key Components | Documentation |
+|-------|---------|--------|----------------|---------------|
+| **[meta-azure-device-update](https://github.com/Azure/meta-azure-device-update)** | Core ADU agent and Azure SDK infrastructure | `feature/vnext-delta` | ADU agent, Azure IoT SDK C, Azure SDK for C++, Delivery Optimization agent/SDK, systemd services | [README](https://github.com/Azure/meta-azure-device-update/blob/feature/vnext-delta/README.md) |
+| **[meta-iot-hub-device-update-delta](https://github.com/Azure/meta-iot-hub-device-update-delta)** | Delta update processing library | `feature/vnext-delta` | `libadudiffapi.so`, native diffgen tools, applydiff utility, e2fsprogs/jsoncpp patches | [README](https://github.com/Azure/meta-iot-hub-device-update-delta/blob/feature/vnext-delta/README.md) |
+| **[meta-raspberrypi-adu](https://github.com/Azure/meta-raspberrypi-adu)** | Raspberry Pi 4 reference implementation | `feature/vnext-delta` | A/B partition management, U-Boot scripts, boot health validation, SWUpdate handlers | [README](https://github.com/Azure/meta-raspberrypi-adu/blob/feature/vnext-delta/README.md), [A/B Architecture](https://github.com/Azure/meta-raspberrypi-adu/blob/feature/vnext-delta/ADU-AB-UPDATE-ARCHITECTURE-GUIDE.md), [Porting Guide](https://github.com/Azure/meta-raspberrypi-adu/blob/feature/vnext-delta/PORTING-GUIDE.md) |
+| **[meta-azure-device-update-samples](https://github.com/Azure/meta-azure-device-update-samples)** | Board-agnostic samples and delta generation workflow | `feature/vnext-delta` | Versioned update images (v1/v2/v3), automated delta generation, test packages, import manifests | [README](https://github.com/Azure/meta-azure-device-update-samples/blob/feature/vnext-delta/README.md) |
+
+### Layer Purposes Explained
+
+#### meta-azure-device-update
+**Core ADU functionality**: Provides the Device Update agent that runs on the device, communicates with Azure IoT Hub, downloads updates, and orchestrates the update process. Includes all necessary Azure SDKs and the Delivery Optimization client for efficient downloads.
+
+**Use case**: Required for all ADU-enabled devices.
+
+#### meta-iot-hub-device-update-delta
+**Bandwidth optimization**: Enables delta updates by providing libraries to generate and apply binary diffs between update packages. Reduces OTA download sizes by 90%+ for incremental updates.
+
+**Use case**: Optional but recommended for devices with bandwidth constraints or metered connections.
+
+#### meta-raspberrypi-adu
+**Reference implementation**: Demonstrates a complete A/B update architecture specifically for Raspberry Pi 4. Shows how to integrate bootloader scripting, partition management, and recovery mechanisms with ADU.
+
+**Use case**: Learning tool and reference for porting ADU to custom hardware. **Not for production use as-is.**
+
+#### meta-azure-device-update-samples
+**Testing and CI/CD**: Provides versioned image recipes and automated delta generation for building test update sequences (v1→v2→v3) and verifying end-to-end update workflows.
+
+**Use case**: Development, testing, and CI/CD pipeline automation.
+
+## Third-Party Dependency Layers
+
+These community-maintained layers provide essential Yocto/OpenEmbedded functionality. **Use the `scarthgap` branch** (latest Yocto LTS release) for all third-party layers:
 
 | Layer | Purpose | Branch |
 |-------|---------|--------|
-| **poky** | Yocto reference distribution (bitbake, oe-core) | scarthgap |
-| **meta-openembedded** | Common utilities (meta-oe, meta-python, meta-networking) | scarthgap |
-| **meta-raspberrypi** | Raspberry Pi BSP support | scarthgap |
-| **meta-swupdate** | SWUpdate framework for atomic image updates | scarthgap |
-| **meta-clang** | LLVM/Clang toolchain (required for delta builds) | scarthgap |
-| **meta-dotnet-core** | .NET Core runtime (optional, for advanced tooling) | scarthgap |
+| **[poky](https://git.yoctoproject.org/poky)** | Yocto reference distribution (BitBake, OE-Core) | `scarthgap` |
+| **[meta-openembedded](https://git.openembedded.org/meta-openembedded)** | Common utilities (meta-oe, meta-python, meta-networking) | `scarthgap` |
+| **[meta-raspberrypi](https://git.yoctoproject.org/meta-raspberrypi)** | Raspberry Pi BSP support | `scarthgap` |
+| **[meta-swupdate](https://github.com/sbabic/meta-swupdate)** | SWUpdate framework for atomic image updates | `scarthgap` |
+| **[meta-clang](https://github.com/kraj/meta-clang)** | LLVM/Clang toolchain (required for delta builds) | `scarthgap` |
 
 > **Note:** For detailed layer-specific documentation including recipes, configuration options, and troubleshooting, please refer to each layer's README file.
 
@@ -87,8 +286,7 @@ $HOME
 
 ```sh
 # Clone the main yocto repo that has install-deps.sh, setup.sh, and build.sh scripts.
-git clone 'git@github.com:azure/iot-hub-device-update-yocto.git' --branch scarthgap "$HOME/adu_yocto/iot-hub-device-update-yocto"
-git clone 'https://github.com/azure/iot-hub-device-update-yocto' --branch scarthgap "$HOME/adu_yocto/iot-hub-device-update-yocto"
+git clone 'https://github.com/Azure/iot-hub-device-update-yocto' --branch feature/vnext-delta "$HOME/adu_yocto/iot-hub-device-update-yocto"
 
 cd $HOME/adu_yocto/iot-hub-device-update-yocto
 
@@ -134,88 +332,12 @@ pushd ~/yocto_build_dir
 find . -type f -name '*.wic' | grep -i deploy
 ```
 
-### Build and Run Status Monitor for ARM64
-
-The **Status Monitor** is a command-line diagnostic tool that continuously monitors the Azure Device Update agent's status on the device. It's useful for:
-
-- **Debugging**: Watch agent state transitions during updates in real-time
-- **Integration Testing**: Verify agent behavior during automated test runs
-- **Troubleshooting**: Identify connectivity or deployment issues
-
-The tool uses the ADU SDK to query agent status and supports multiple output formats (human-readable, JSON, CSV).
-
-#### Build the Status Monitor
-
-After a successful Yocto build, compile the status_monitor for ARM64:
-
-```sh
-cd ~/adu_yocto/iot-hub-device-update-yocto
-
-# Build using Yocto cross-compiler
-./scripts/build_status_monitor.sh
-
-# Verify it's built for ARM64
-file ~/adu_yocto/sdk_examples/status_monitor
-```
-
-#### Deploy and Run on Device
-
-```sh
-# Copy to Raspberry Pi
-scp ~/adu_yocto/sdk_examples/status_monitor root@<rpi-ip>:/home/adu/
-
-# SSH to device and run
-ssh root@<rpi-ip>
-cd /home/adu
-chown adu:adu status_monitor
-su -p adu
-./status_monitor --help          # Show usage
-./status_monitor -i 5            # Monitor every 5 seconds
-./status_monitor -f json -c      # JSON format, changes only
-```
-
 ## Prerequisites
 
 Before getting started with this project, please get yourself familiar with the following topics:
 
 - [The Yocto Project Software Overview](https://www.yoctoproject.org/software-overview/)
 - [The Device Update for IoTHub Overview](http://github.com/azure/iot-hub-device-update)
-
-### WiFi/Bluetooth Support (Optional)
-
-**By default, WiFi and Bluetooth are DISABLED** in the built images. This is because enabling these features requires accepting a proprietary firmware license.
-
-#### Why is WiFi/Bluetooth disabled by default?
-
-The Raspberry Pi 4's onboard WiFi/Bluetooth chip (Broadcom BCM43455) requires proprietary firmware distributed under the **"synaptics-killswitch" license**. This is a non-open-source license with specific terms that must be explicitly accepted.
-
-To ensure you are aware of and consent to these licensing terms, WiFi/Bluetooth support is disabled by default and must be explicitly enabled during the build.
-
-#### How to enable WiFi/Bluetooth
-
-Add the `--enable-wifi-bluetooth` flag to your build command:
-
-```sh
-./scripts/build.sh -c -t Debug -o ~/yocto_build_dir --enable-wifi-bluetooth
-```
-
-This will:
-1. Accept the `synaptics-killswitch` license on your behalf
-2. Include the BCM43455 WiFi/Bluetooth firmware in the image
-3. Enable WiFi and Bluetooth hardware features
-
-#### Alternative: Use Ethernet or USB WiFi/Bluetooth
-
-If you prefer not to accept the proprietary license, you can:
-- **Use wired Ethernet** for network connectivity (recommended for OTA updates)
-- **Use USB WiFi/Bluetooth dongles** with open-source driver support (e.g., Atheros, RTL8188 chipsets)
-
-#### License Information
-
-- **License Name**: synaptics-killswitch
-- **Firmware Package**: linux-firmware-rpidistro-bcm43455
-- **What it controls**: WiFi and Bluetooth functionality on Raspberry Pi 4
-- **License details**: [Raspberry Pi Firmware Repository](https://github.com/RPi-Distro/firmware-nonfree)
 
 ### Get Source Code
 
@@ -227,12 +349,16 @@ We only support the `scarthgap` release of the Yocto Project.
 
 ```sh
 # Clone this repository
-git clone https://github.com/Azure/iot-hub-device-update-yocto -b scarthgap ~/adu_yocto/iot-hub-device-update-yocto
+git clone https://github.com/Azure/iot-hub-device-update-yocto -b feature/vnext-delta ~/adu_yocto/iot-hub-device-update-yocto
 cd ~/adu_yocto/iot-hub-device-update-yocto
 
 # Clone all required meta-layers automatically
 ./scripts/setup.sh
 ```
+
+The `setup.sh` script automatically clones:
+- **Microsoft ADU layers** using branch `feature/vnext-delta`
+- **Third-party layers** using branch `scarthgap`
 
 #### Manual Setup (Reference)
 
@@ -241,27 +367,25 @@ If you prefer manual control, clone layers individually into the `yocto/` direct
 ```sh
 cd ~/adu_yocto/iot-hub-device-update-yocto/yocto
 
-# Core Yocto layers
+# Core Yocto layers (use scarthgap branch)
 git clone --depth 1 --branch scarthgap git://git.yoctoproject.org/poky
 git clone --depth 1 --branch scarthgap git://git.openembedded.org/meta-openembedded
 git clone --depth 1 --branch scarthgap https://github.com/sbabic/meta-swupdate
 git clone --depth 1 --branch scarthgap git://git.yoctoproject.org/meta-raspberrypi
+git clone --depth 1 --branch scarthgap https://github.com/kraj/meta-clang
 
-# ADU layers (use 'main' or specific release branch)
-git clone --branch main https://github.com/azure/meta-azure-device-update
-git clone --branch main https://github.com/azure/meta-raspberrypi-adu
-
-# Optional: Delta update support (requires meta-clang)
-git clone --branch scarthgap https://github.com/kraj/meta-clang
-git clone --branch main https://github.com/azure/meta-iot-hub-device-update-delta
-git clone --branch main https://github.com/azure/meta-azure-device-update-samples
+# Microsoft ADU layers (use feature/vnext-delta branch)
+git clone --branch feature/vnext-delta https://github.com/Azure/meta-azure-device-update
+git clone --branch feature/vnext-delta https://github.com/Azure/meta-iot-hub-device-update-delta
+git clone --branch feature/vnext-delta https://github.com/Azure/meta-raspberrypi-adu
+git clone --branch feature/vnext-delta https://github.com/Azure/meta-azure-device-update-samples
 ```
 
 ### Building The Project Locally
 
 #### Install Build Dependencies and Tools
 
-For more information on the Yocto build system, the open embedded base image, and example builds please see [Yocto Project Quick Build](https://docs.yoctoproject.org/brief-yoctoprojectqs/index.html#yocto-project-quick-build). 
+For more information on the Yocto build system, the open embedded base image, and example builds please see [Yocto Project Quick Build](https://docs.yoctoproject.org/brief-yoctoprojectqs/index.html#yocto-project-quick-build).
 
 ```sh
 sudo ./scripts/install-deps.sh
@@ -269,9 +393,9 @@ sudo ./scripts/install-deps.sh
 
 ### Creating the Private Key for Sw Update Signing
 
-To create the `*.swu` file you will need to provide the build system with a private key and password file so that it can sign the generated image and then create the Sw Update file. This is REQUIRED for a Sw Update update to function. You MUST put the private key and password file inside of the `repo-root-directory/keys` directory. The build will break if you do not complete this step. 
+To create the `*.swu` file you will need to provide the build system with a private key and password file so that it can sign the generated image and then create the Sw Update file. This is REQUIRED for a Sw Update update to function. You MUST put the private key and password file inside of the `repo-root-directory/keys` directory. The build will break if you do not complete this step.
 
-You can find the instructions for generating the private key and creating the password file [here](./keys/README.md). 
+You can find the instructions for generating the private key and creating the password file [here](./keys/README.md).
 
 
 ### Build The Project
@@ -308,17 +432,16 @@ You can use:
 ```
 to see the list of all options for the build.
 
-If successful, the output image file (adu-base-image-raspberrypi4-64.wic.gz) and example .swu update file (adu-update-image.swu) should be located in `~/yocto_build_dir/tmp/deploy/images/raspberrypi4-64` directory. If you built for version 0.0.0.1 you will need to copy the base file out and run the build again to produce a Sw Update update (file ending `.swu`) to be used for the update. You need to do this to make a usable base and update image. 
+If successful, the output image file (adu-base-image-raspberrypi4-64.wic.gz) and example .swu update file (adu-update-image.swu) should be located in `~/yocto_build_dir/tmp/deploy/images/raspberrypi4-64` directory. If you built for version 0.0.0.1 you will need to copy the base file out and run the build again to produce a Sw Update update (file ending `.swu`) to be used for the update. You need to do this to make a usable base and update image.
 
 ```sh
-.
+~/adu_yocto/out/build/tmp/deploy/images/raspberrypi4-64/
 ├── adu-base-image-raspberrypi4-64.wic.gz
-├── adu-update-image-raspberrypi4-64.swu
 ```
 
 ## Delta Updates (Binary Diff/Patch)
 
-Delta updates dramatically reduce download sizes by generating small differential update files between SWU images (typically 90%+ bandwidth reduction).
+Delta updates dramatically reduce download sizes by generating small differential update files between SWU images (typically 40%+ bandwidth reduction).
 
 ### Architecture Overview
 
@@ -483,36 +606,225 @@ syft convert ./adu-base-image-raspberrypi4-64.spdx.tar.zst -o cyclonedx-json
 |---|---|---|
 | Raspberry Pi 4 | scarthgap | [![Build Status](https://dev.azure.com/azure-device-update/adu-linux-client/_apis/build/status/azure.iot-hub-device-update-yocto?branchName=scarthgap)](https://dev.azure.com/azure-device-update/adu-linux-client/_build/latest?definitionId=57&branchName=scarthgap)|
 
-## GitHub Actions Workflows
+## Porting to Your Own Hardware
 
-GitHub Actions workflows are available in `.github/workflows/` for automated builds:
+### Overview
 
-- **`yocto-build.yml`** - Standard builds on GitHub-hosted runners
-- **`yocto-build-incremental.yml`** - Fast incremental builds for PRs
-- **`yocto-build-self-hosted.yml`** - Production builds on self-hosted runners
+The `meta-raspberrypi-adu` layer provided in this repository demonstrates a complete A/B update implementation for Raspberry Pi 4. To enable Azure Device Update on your custom hardware, you'll need to **port** this reference implementation by adapting it to your device's specific characteristics.
 
-**Note:** The GitHub Actions workflows automatically generate **test signing keys** for demonstration purposes. For production builds:
-1. Generate secure keys following the instructions in `keys/README.md`
-2. Store them in GitHub Secrets (`ADU_PRIVATE_KEY` and `ADU_KEY_PASSWORD`)
-3. The self-hosted workflow will automatically use your production keys
+### Prerequisites for Porting
 
-See `.github/workflows/README.md` for detailed documentation on setup, usage, and configuration.
+Before starting, ensure you have:
+
+1. **Working Yocto BSP** for your target hardware
+2. **Bootloader with A/B support** (U-Boot recommended, or custom bootloader with equivalent capabilities)
+3. **Sufficient storage** for dual rootfs partitions (2.2-2.5x single rootfs size)
+4. **Network connectivity** (Ethernet, WiFi, cellular, etc.)
+5. **Understanding of your hardware's boot process** (bootloader, partition layout, firmware loading)
+
+### Porting Steps
+
+#### 1. Create a Custom ADU Layer
+
+Create a new meta-layer for your device (e.g., `meta-mydevice-adu`):
+
+```sh
+# Create layer structure
+mkdir -p meta-mydevice-adu/recipes-{bsp,core,support}
+mkdir -p meta-mydevice-adu/conf
+
+# Create layer.conf
+cat > meta-mydevice-adu/conf/layer.conf << 'EOF'
+BBPATH .= ":${LAYERDIR}"
+BBFILES += "${LAYERDIR}/recipes-*/*/*.bb ${LAYERDIR}/recipes-*/*/*.bbappend"
+
+BBFILE_COLLECTIONS += "mydevice-adu"
+BBFILE_PATTERN_mydevice-adu = "^${LAYERDIR}/"
+BBFILE_PRIORITY_mydevice-adu = "10"
+
+LAYERDEPENDS_mydevice-adu = "core swupdate azure-device-update"
+LAYERSERIES_COMPAT_mydevice-adu = "scarthgap"
+EOF
+```
+
+#### 2. Adapt Partition Layout
+
+Modify your device's partition table to support A/B updates. Refer to the [Industry Implementation Guidelines](#industry-implementation-guidelines) above.
+
+**Example for eMMC (adjust sizes for your device)**:
+
+```
+/dev/mmcblk0p1  -  64 MB   - Boot (kernel, DTB, bootloader env)
+/dev/mmcblk0p2  -  2 GB    - RootFS A (Slot A)
+/dev/mmcblk0p3  -  2 GB    - RootFS B (Slot B)
+/dev/mmcblk0p4  -  4 GB    - Data (persistent storage)
+```
+
+Create a WKS file in your layer:
+
+```sh
+# recipes-bsp/images/mydevice-image.wks
+part /boot --source bootimg --ondisk mmcblk0 --fstype=vfat --label boot --active --align 4096 --size 64M
+part / --source rootfs --ondisk mmcblk0 --fstype=ext4 --label rootfs_a --align 4096 --size 2048M
+part / --source rootfs --ondisk mmcblk0 --fstype=ext4 --label rootfs_b --align 4096 --size 2048M
+part /data --ondisk mmcblk0 --fstype=ext4 --label data --align 4096 --size 4096M --fsoptions "defaults,noatime"
+```
+
+#### 3. Customize Bootloader Integration
+
+**If using U-Boot**, adapt the boot scripts from `meta-raspberrypi-adu` to your device:
+
+- Review [recipes-bsp/rpi-u-boot-scr](https://github.com/Azure/meta-raspberrypi-adu/tree/feature/vnext-delta/recipes-bsp/rpi-u-boot-scr)
+- Modify environment variables for your partition scheme
+- Adjust device tree and kernel loading commands
+- Implement rollback logic based on boot counters
+
+**If using a custom bootloader**, implement equivalent functionality:
+
+- Boot slot selection (A/B switching)
+- Boot attempt counter and automatic rollback
+- Update status flags (unverified/verified/corrupted)
+- Environment persistence across reboots
+
+#### 4. Integrate SWUpdate
+
+Configure SWUpdate for your device's update strategy:
+
+```sh
+# recipes-support/swupdate/swupdate_%.bbappend
+
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
+
+SRC_URI += " \
+    file://swupdate.cfg \
+    file://09-swupdate-args \
+"
+
+# Add device-specific SWUpdate configuration
+do_install:append() {
+    install -d ${D}${sysconfdir}/swupdate
+    install -m 0644 ${WORKDIR}/swupdate.cfg ${D}${sysconfdir}/swupdate/
+}
+```
+
+Create `sw-description` handler for your partition layout (adapt from `meta-raspberrypi-adu` examples).
+
+#### 5. Configure ADU Agent
+
+Create a device-specific ADU configuration:
+
+```sh
+# recipes-azure/azure-device-update/azure-device-update_%.bbappend
+
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
+
+SRC_URI += "file://du-config.json"
+
+do_install:append() {
+    install -m 0644 ${WORKDIR}/du-config.json ${D}${sysconfdir}/adu/
+}
+```
+
+Update `du-config.json` with your device's capabilities:
+
+```json
+{
+  "schemaVersion": "1.2",
+  "aduShellTrustedUsers": ["adu", "do"],
+  "manufacturer": "MyCompany",
+  "model": "MyDevice-v1",
+  "compatPropertyNames": ["manufacturer", "model"],
+  "agents": [
+    {
+      "name": "main",
+      "runas": "adu",
+      "connectionSource": {
+        "connectionType": "AIS",
+        "connectionData": ""
+      },
+      "manufacturer": "MyCompany",
+      "model": "MyDevice-v1"
+    }
+  ]
+}
+```
+
+#### 6. Implement Boot Health Validation
+
+The Raspberry Pi 4 reference implementation provides a complete boot validation system that you can adapt for your device.
+
+**Reference implementation**: [recipes-support/adu-boot-validation](https://github.com/Azure/meta-raspberrypi-adu/tree/feature/vnext-delta/recipes-support/adu-boot-validation)
+
+Key components to review and adapt:
+
+- **[adu-boot-validation.bb](https://github.com/Azure/meta-raspberrypi-adu/blob/feature/vnext-delta/recipes-support/adu-boot-validation/adu-boot-validation.bb)** — Recipe for boot validation service
+- **[adu-boot-validation.service](https://github.com/Azure/meta-raspberrypi-adu/blob/feature/vnext-delta/recipes-support/adu-boot-validation/files/adu-boot-validation.service)** — systemd service unit with timeout configuration
+- **[adu-boot-validation.sh](https://github.com/Azure/meta-raspberrypi-adu/blob/feature/vnext-delta/recipes-support/adu-boot-validation/files/adu-boot-validation.sh)** — Main validation script with configurable checks
+- **[boot-validation.conf](https://github.com/Azure/meta-raspberrypi-adu/blob/feature/vnext-delta/recipes-support/adu-boot-validation/files/boot-validation.conf)** — Configuration file for timeout and validation stages
+
+The reference implementation includes:
+- Configurable validation timeout (default: 5 minutes)
+- Health check framework with critical/warning severity levels
+- U-Boot environment variable integration for boot confirmation
+- Automatic rollback on validation failure
+- Manual override capability for debugging
+
+Adapt these components to your device's specific requirements (network connectivity, critical services, hardware sensors, etc.).
+
+### Detailed Porting Documentation
+
+For comprehensive guidance on porting ADU to your hardware, refer to:
+
+- **[meta-raspberrypi-adu Porting Guide](https://github.com/Azure/meta-raspberrypi-adu/blob/feature/vnext-delta/PORTING-GUIDE.md)** — Step-by-step instructions for adapting the reference implementation
+- **[A/B Update Architecture Guide](https://github.com/Azure/meta-raspberrypi-adu/blob/feature/vnext-delta/ADU-AB-UPDATE-ARCHITECTURE-GUIDE.md)** — Deep dive into the architecture and design decisions
+- **[meta-raspberrypi-adu README](https://github.com/Azure/meta-raspberrypi-adu/blob/feature/vnext-delta/README.md)** — Layer overview and configuration options
+
+### Common Porting Challenges
+
+| Challenge | Solution |
+|-----------|----------|
+| **Different bootloader** | Implement equivalent A/B logic in your bootloader's scripting language |
+| **Limited storage** | Use SquashFS for read-only rootfs, optimize image size, consider read-only overlays |
+| **No dual partition support** | Implement container-based updates (Docker/Podman) or OSTree atomic updates |
+| **Secure boot requirements** | Enable U-Boot verified boot (FIT images) or implement hardware-backed secure boot |
+| **Power-loss recovery** | Add watchdog timer integration, implement atomic update commits, enhance rollback logic |
+
+### Testing Your Port
+
+After porting, thoroughly test:
+
+1. **Initial deployment**: Flash base image and verify device boots
+2. **Successful update**: Deploy update package, verify it applies and boots correctly
+3. **Failed update**: Simulate failures (corrupted image, network interruption, power loss)
+4. **Rollback**: Verify automatic rollback to previous working partition
+5. **Multi-generation updates**: Test v1→v2→v3 update sequences
+6. **Delta updates**: Verify delta update download and application
+
+### Getting Help
+
+If you encounter issues during porting:
+
+1. **Review layer documentation** linked above
+2. **Search existing GitHub issues** in Microsoft ADU layer repositories
+3. **Create a GitHub issue** with details about your hardware, Yocto version, and specific problem
+4. **Join the community** — We're here to help!
+
+⚠️ **Production Reminder**: Even after successful porting, perform extensive field testing before production deployment. See [Production Deployment Warning](#️-production-deployment-warning) above.
 
 
-## Using Your Own Board and Guidance for Production Images
+## Questions? Feedback? Issues?
 
-### Using Your Own Board
+While this reference implementation is provided as-is without warranty (see disclaimer above), we genuinely welcome your feedback, questions, and contributions!
 
-If you've tried out Device Update on RaspberryPi 4 and decided you want to try and use it on other hardware you will need to port the `meta-raspberrypi-adu` layer to support your own board. You can find information on what changes may be required [here](https://github.com/Azure/meta-raspberrypi-adu/README.md). Keep in mind the `meta-raspberrypi-adu` layer is provided as is. It's a proof of concept. The repository contains information on how to port the existing proof of concept but you will likely need to add better u-boot scripts, include proper signing key information, and many other small things to get your board up to snuff. These are board dependent and are not under the purview of the Device Update team. If you have a question/comment please make a GitHub issue and we can take a look at it. 
+**We're here to help:**
 
+- **Questions or discussions?** [Open a GitHub Discussion](https://github.com/Azure/iot-hub-device-update-yocto/discussions) — Ask about architecture, porting challenges, or best practices
+- **Found a bug or issue?** [Create a GitHub Issue](https://github.com/Azure/iot-hub-device-update-yocto/issues) — We'll investigate and work to address it
+- **Have suggestions?** We'd love to hear them! Your feedback helps improve this reference implementation and guide future development
 
-### Recommendations for Adapting for Production Images
-Like is said at the beginning of this document this repository is intended to be a proof-of-concept. It is not intended to be a production ready drag and drop solution for building images to be used in the field. Within this repository We've made some recommendations for what might need to be changed but these recommendations should be taken as just that, recommendations. 
+The development team is actively monitoring this repository and genuinely happy to chat about Azure Device Update, A/B update architectures, Yocto integration patterns, or any challenges you're facing. Your real-world experiences help us make this reference implementation more useful for the entire community.
 
-
-## Question? Comment? Bug?
-
-Please create a GitHub issue and we'll get back to you as soon as we're able. Your feedback is integral to improving the agent, our software practices, and product direction. We're always happy to chat.
+**Community contributions are welcome!** If you've solved a porting challenge, optimized a recipe, or improved documentation, consider submitting a pull request to help others.
 
 ## Why Raspberry Pi 4?
 
