@@ -9,7 +9,7 @@
 #
 
 yocto_release='scarthgap'
-adu_release='main'
+adu_release='feature/vnext-delta'
 project_root="$HOME/adu_yocto"
 
 repo_base="${project_root}/iot-hub-device-update-yocto"
@@ -48,10 +48,10 @@ git clone --depth 1 --branch $yocto_release $uri_meta_rpi  || exit 1
 # Device Update Layers
 #
 # meta-azure-device-update: Core ADU agent, extensions, and download handlers
-git clone --branch $yocto_release http://github.com/azure/meta-azure-device-update
+git clone --branch $adu_release http://github.com/azure/meta-azure-device-update
 
 # meta-iot-hub-device-update-delta: Delta update processor and diff generation tools
-git clone --branch $yocto_release http://github.com/azure/meta-iot-hub-device-update-delta
+git clone --branch $adu_release http://github.com/azure/meta-iot-hub-device-update-delta
 
 # Dependencies for meta-iot-hub-device-update-delta layer
 # meta-clang is required for building delta processor native components
@@ -68,9 +68,9 @@ git clone --branch $meta_dotnet_branch $uri_meta_dotnet || exit 1
 echo "✓ meta-dotnet-core cloned (not added to bblayers.conf by default)"
 
 # meta-azure-device-update-samples: Sample images, test packages, and reference configurations
-git clone --branch scarthgap/raspberrypi http://github.com/azure/meta-azure-device-update-samples
+git clone --branch $adu_release http://github.com/azure/meta-azure-device-update-samples
 
 # meta-raspberrypi-adu: Raspberry Pi specific A/B update support and boot configuration
-git clone --branch $yocto_release http://github.com/azure/meta-raspberrypi-adu
+git clone --branch $adu_release http://github.com/azure/meta-raspberrypi-adu
 
 popd
