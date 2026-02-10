@@ -841,11 +841,40 @@ if [[ $REBUILD == 'true' ]]; then
     find $BUILD_DIR -mindepth 1 -maxdepth 1 ! -name 'sstate-cache' -exec rm -rf {} + 2>/dev/null || true
 fi
 
-# Use persistent sstate cache location outside the tmp build directory
-# This allows the cache to survive full rebuilds
+# Use persistent sstate cache and downloads location outside the tmp build directory
+# This allows the cache to survive full rebuilds and can be shared across builds
 export SSTATE_DIR=$BUILD_DIR/sstate-cache
+export DL_DIR=$BUILD_DIR/downloads
+
 mkdir -p $SSTATE_DIR
-echo "Using SSTATE_DIR: $SSTATE_DIR"
+mkdir -p $DL_DIR
+
+echo "========================================"
+echo "Yocto Build Cache Configuration"
+echo "========================================"
+echo "SSTATE_DIR: $SSTATE_DIR"
+echo "DL_DIR: $DL_DIR"
+
+# Show cache statistics if caches exist
+if [ -d "$SSTATE_DIR" ] && [ "$(ls -A $SSTATE_DIR 2>/dev/null)" ]; then
+    SSTATE_SIZE=$(du -sh $SSTATE_DIR 2>/dev/null | cut -f1)
+    SSTATE_FILES=$(find $SSTATE_DIR -type f 2>/dev/null | wc -l)
+    echo "Existing sstate cache: $SSTATE_SIZE ($SSTATE_FILES files)"
+    echo "  ✓ Sstate cache will accelerate build"
+else
+    echo "No existing sstate cache (first build will populate)"
+fi
+
+if [ -d "$DL_DIR" ] && [ "$(ls -A $DL_DIR 2>/dev/null)" ]; then
+    DL_SIZE=$(du -sh $DL_DIR 2>/dev/null | cut -f1)
+    DL_FILES=$(find $DL_DIR -type f 2>/dev/null | wc -l)
+    echo "Existing downloads cache: $DL_SIZE ($DL_FILES files)"
+    echo "  ✓ Downloads cache will skip re-downloading sources"
+else
+    echo "No existing downloads cache (sources will be downloaded)"
+fi
+echo "========================================"
+echo ""
 
 # Set parallel build options for faster builds
 # BB_NUMBER_THREADS: Number of parallel BitBake tasks
@@ -886,7 +915,7 @@ fi
 
 # export TOP_DIR=$ROOT_DIR/yocto
 # We need to tell bitbake about any env vars it should read in.
-export BB_ENV_PASSTHROUGH_ADDITIONS="$BB_ENV_PASSTHROUGH_ADDITIONS ADUC_USE_TEST_ROOT_KEYS ADU_GENERATION ADU_GIT_BRANCH ADU_SRC_URI ADU_GIT_COMMIT DO_GIT_BRANCH DO_SRC_URI DO_GIT_COMMIT ADU_DELTA_GIT_BRANCH ADU_DELTA_SRC_URI ADU_DELTA_GIT_COMMIT ADU_DELTA_LOCAL_SRC ADU_DELTA_SKIP_PATCHES BUILD_TYPE ADU_SOFTWARE_VERSION ADUC_PUBLIC_KEY ADUC_PRIVATE_KEY ADUC_PRIVATE_KEY_PASSWORD SSTATE_DIR BB_NUMBER_THREADS PARALLEL_MAKE WITH_FEATURE_DELTA_UPDATE ENABLE_WIFI_BLUETOOTH BUILD_UBOOT_DEBUG_SCRIPT USE_LOCAL_ADU_SOURCE ADU_LOCAL_SOURCE_DIR USE_LOCAL_ADU_DELTA_SOURCE ADU_DELTA_LOCAL_SOURCE_DIR USE_LOCAL_DO_SOURCE DO_LOCAL_SOURCE_DIR USE_LOCAL_AZIOT_SDK_C_SOURCE AZIOT_SDK_C_LOCAL_SOURCE_DIR ADU_ROOT_PASSWD WITH_ADUC_TESTS NUGET_SOURCE NUGET_CONFIG_PATH"
+export BB_ENV_PASSTHROUGH_ADDITIONS="$BB_ENV_PASSTHROUGH_ADDITIONS ADUC_USE_TEST_ROOT_KEYS ADU_GENERATION ADU_GIT_BRANCH ADU_SRC_URI ADU_GIT_COMMIT DO_GIT_BRANCH DO_SRC_URI DO_GIT_COMMIT ADU_DELTA_GIT_BRANCH ADU_DELTA_SRC_URI ADU_DELTA_GIT_COMMIT ADU_DELTA_LOCAL_SRC ADU_DELTA_SKIP_PATCHES BUILD_TYPE ADU_SOFTWARE_VERSION ADUC_PUBLIC_KEY ADUC_PRIVATE_KEY ADUC_PRIVATE_KEY_PASSWORD SSTATE_DIR DL_DIR BB_NUMBER_THREADS PARALLEL_MAKE WITH_FEATURE_DELTA_UPDATE ENABLE_WIFI_BLUETOOTH BUILD_UBOOT_DEBUG_SCRIPT USE_LOCAL_ADU_SOURCE ADU_LOCAL_SOURCE_DIR USE_LOCAL_ADU_DELTA_SOURCE ADU_DELTA_LOCAL_SOURCE_DIR USE_LOCAL_DO_SOURCE DO_LOCAL_SOURCE_DIR USE_LOCAL_AZIOT_SDK_C_SOURCE AZIOT_SDK_C_LOCAL_SOURCE_DIR ADU_ROOT_PASSWD WITH_ADUC_TESTS NUGET_SOURCE NUGET_CONFIG_PATH"
 
 echo "Initializing Yocto/OpenEmbedded build environment..."
 echo "  Build directory: $BUILD_DIR"
