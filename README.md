@@ -250,88 +250,6 @@ These community-maintained layers provide essential Yocto/OpenEmbedded functiona
 
 > **Note:** For detailed layer-specific documentation including recipes, configuration options, and troubleshooting, please refer to each layer's README file.
 
-## Quick Start
-
-On a machine installed with [Ubuntu 22.04 LTS (Jammy Jellyfish)](https://releases.ubuntu.com/22.04/),
-ensure at least 100GB of space on the partition where /home is mounted (or adjust the `base_yocto_path` var in the steps below and in scripts/setup.sh accordingly).
-
-### Directory Structure After Quick Steps
-
-The final directory structure as per the "quick step" exports below  are as follows:
-```
-$HOME
-  └ adu_yocto/
-    ├── iot-hub-device-update-yocto               # github repo with scripts
-    │   ├── azurepipelines
-    │   ├── keys
-    │   ├── scripts
-    │   └── yocto
-    │       ├── config-templates
-    │       ├── meta-azure-device-update          # DU Agent yocto recipes
-    │       ├── meta-azure-device-update-samples  # Board-agnostic samples & delta demos
-    │       ├── meta-iot-hub-device-update-delta  # Delta updates library
-    │       ├── meta-openembedded                 # OpenEmbedded layers
-    │       ├── meta-raspberrypi                  # RPi layers
-    │       ├── meta-raspberrypi-adu              # ADU-specific RPi layer
-    │       ├── meta-swupdate                     # swupdate layer
-    │       └── poky
-    └── out
-        ├── build                                 # post successful yocto build
-        ├── cache                                 # post successful yocto build
-        ├── conf                                  # post successful yocto build
-        └── sstate-cache                          # post successful yocto build
-```
-
-### Quick Steps
-
-```sh
-# Clone the main yocto repo that has install-deps.sh, setup.sh, and build.sh scripts.
-git clone 'https://github.com/Azure/iot-hub-device-update-yocto' --branch feature/vnext-delta "$HOME/adu_yocto/iot-hub-device-update-yocto"
-
-cd $HOME/adu_yocto/iot-hub-device-update-yocto
-
-# Install dev dependencies via APT packages.
-./scripts/install-deps.sh
-
-# Clones poky and the meta layers to dirs under $HOME/adu_yocto/yocto/
-./scripts/setup.sh
-
-# Create private/public key pair with password-protected private key in the "keys" folder
-#
-# The private cert, keys/priv.pem, is what should be used when creating the sw-description signature file in swupdate CPIO package.
-# The public cert, keys/pub.pem, will be installed into the .wic raw image file produced by bitbake.
-# The script update payload (side-by-side with the .swu swupdate payload) would call out to swupdate utility with the path to this
-# public cert. swupdate on the device will use it to verify sw-description signature file in the .swu swupdate CPIO archive.
-pushd keys
-echo "PUT A PASSWORD FOR swupdate sw-description signing HERE" > ./priv.pass
-openssl genrsa -out ./priv.pem -passout file:./priv.pass
-openssl rsa -in ./priv.pem -passin file:priv.pass -out public.pem -outform PEM -pubout
-popd
-
-# Launch bitbake to build the .wic image as per the yocto recipes.
-#
-# Build with default branches (automatically fetches latest commit from branch):
-# ./scripts/build.sh -c -t Debug -o ~/yocto_build_dir
-#
-# Build with specific branch (automatically fetches HEAD commit):
-# ./scripts/build.sh -c -t Debug -o ~/yocto_build_dir --adu-git-branch feature/v-next
-#
-# Optional: Specify ADU Branch and Commit explicitly
-# ./scripts/build.sh -c -t Debug -o ~/yocto_build_dir --adu-git-branch release/1.2.0 --adu-git-commit 9cf04c49d49b587712d01e9db6e1870a70959682
-#
-# Use parallel builds for faster compilation (uses all CPU cores by default):
-# ./scripts/build.sh -c -t Debug -o ~/yocto_build_dir -j 8 --parallel-make 8
-#
-# Full rebuild (preserves sstate cache for faster rebuilds):
-# ./scripts/build.sh --rebuild -t Debug -o ~/yocto_build_dir --adu-git-branch feature/v-next
-
-./scripts/build.sh -c -t Debug -o ~/yocto_build_dir
-
-# List the deployment .wic file and symlink to it.
-pushd ~/yocto_build_dir
-find . -type f -name '*.wic' | grep -i deploy
-```
-
 ## Prerequisites
 
 Before getting started with this project, please get yourself familiar with the following topics:
@@ -460,8 +378,8 @@ The delta update system uses a **dual-build approach**:
 
 ```sh
 # Build base image, versioned update images, and delta files
-./scripts/build.sh --local-sources ADU,ADU_DELTA \
-  -o ~/adu_yocto/out/build -j 6 --parallel-make 6 \
+./scripts/build.sh \
+  -o ~/adu_yocto/out -j 6 --parallel-make 6 \
   --rebuild adu-base-image,adu-update-image-v1,adu-update-image-v2,adu-update-image-v3,adu-delta-image
 ```
 
@@ -604,7 +522,7 @@ syft convert ./adu-base-image-raspberrypi4-64.spdx.tar.zst -o cyclonedx-json
 
 | Board | Branch | Status |
 |---|---|---|
-| Raspberry Pi 4 | scarthgap | [![Build Status](https://dev.azure.com/azure-device-update/adu-linux-client/_apis/build/status/azure.iot-hub-device-update-yocto?branchName=scarthgap)](https://dev.azure.com/azure-device-update/adu-linux-client/_build/latest?definitionId=57&branchName=scarthgap)|
+| Raspberry Pi 4 | feature/vnext-delta | [![Build Status](https://dev.azure.com/msazure/One/_apis/build/status%2FOneBranch%2Fazure-iot-adu%2FClient%2Fazure-iot-adu-client.gen1.yocto?repoName=ADUGen1.YoctoBuildPipeline&branchName=feature%2Fvnext-delta)](https://dev.azure.com/msazure/One/_build/latest?definitionId=438576&repoName=ADUGen1.YoctoBuildPipeline&branchName=feature%2Fvnext-delta)|
 
 ## Porting to Your Own Hardware
 
