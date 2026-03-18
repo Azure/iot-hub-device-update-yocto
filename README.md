@@ -246,7 +246,8 @@ These community-maintained layers provide essential Yocto/OpenEmbedded functiona
 | **[meta-openembedded](https://git.openembedded.org/meta-openembedded)** | Common utilities (meta-oe, meta-python, meta-networking) | `scarthgap` |
 | **[meta-raspberrypi](https://git.yoctoproject.org/meta-raspberrypi)** | Raspberry Pi BSP support | `scarthgap` |
 | **[meta-swupdate](https://github.com/sbabic/meta-swupdate)** | SWUpdate framework for atomic image updates | `scarthgap` |
-| **[meta-clang](https://github.com/kraj/meta-clang)** | LLVM/Clang toolchain (required for delta builds) | `scarthgap` |
+| **[meta-clang](https://github.com/kraj/meta-clang)** | LLVM/Clang toolchain (required for delta builds) | `scarthgap` (pinned to commit `731488...`) |
+| **[meta-dotnet-core](https://github.com/RDunkley/meta-dotnet-core)** | .NET runtime support (optional — not in bblayers.conf by default) | default branch |
 
 > **Note:** For detailed layer-specific documentation including recipes, configuration options, and troubleshooting, please refer to each layer's README file.
 
@@ -277,6 +278,10 @@ cd ~/adu_yocto/iot-hub-device-update-yocto
 The `setup.sh` script automatically clones:
 - **Microsoft ADU layers** using branch `feature/vnext-delta`
 - **Third-party layers** using branch `scarthgap`
+- **meta-clang** on `scarthgap`, pinned to commit `731488...` for reproducible builds
+- **meta-dotnet-core** (optional) from [RDunkley/meta-dotnet-core](https://github.com/RDunkley/meta-dotnet-core) using the default branch
+
+The script is idempotent — it skips layers that have already been cloned.
 
 #### Manual Setup (Reference)
 
@@ -290,13 +295,19 @@ git clone --depth 1 --branch scarthgap git://git.yoctoproject.org/poky
 git clone --depth 1 --branch scarthgap git://git.openembedded.org/meta-openembedded
 git clone --depth 1 --branch scarthgap https://github.com/sbabic/meta-swupdate
 git clone --depth 1 --branch scarthgap git://git.yoctoproject.org/meta-raspberrypi
-git clone --depth 1 --branch scarthgap https://github.com/kraj/meta-clang
+
+# meta-clang (pinned to specific commit for reproducible builds)
+git clone --branch scarthgap https://github.com/kraj/meta-clang
+cd meta-clang && git checkout 731488911f55ebfe746068512b426351192f82f2 && cd ..
 
 # Microsoft ADU layers (use feature/vnext-delta branch)
 git clone --branch feature/vnext-delta https://github.com/Azure/meta-azure-device-update
 git clone --branch feature/vnext-delta https://github.com/Azure/meta-iot-hub-device-update-delta
 git clone --branch feature/vnext-delta https://github.com/Azure/meta-raspberrypi-adu
 git clone --branch feature/vnext-delta https://github.com/Azure/meta-azure-device-update-samples
+
+# Optional: .NET runtime support (not in bblayers.conf by default)
+git clone https://github.com/RDunkley/meta-dotnet-core
 ```
 
 ### Building The Project Locally

@@ -1,95 +1,116 @@
 #!/bin/bash
+set -euo pipefail
 
-# If both /etc/apt/sources.list.d/azure-cli.list and /etc/apt/sources.list.d/azure-cli.sources exist, delete azure-cli.list
-if [ -f /etc/apt/sources.list.d/azure-cli.list ] && [ -f /etc/apt/sources.list.d/azure-cli.sources ]; then
-    echo "Both /etc/apt/sources.list.d/azure-cli.list and /etc/apt/sources.list.d/azure-cli.sources exist." 
-    echo "Deleting /etc/apt/sources.list.d/azure-cli.list"
-    sudo rm -f /etc/apt/sources.list.d/azure-cli.list
+#
+# install-deps.sh - Install build dependencies for Azure Device Update Yocto builds
+#
+# Supports Ubuntu 20.04, 22.04, and 24.04+
+# Can be run as root or as a regular user (auto-detects and uses sudo when needed)
+#
+
+# Use sudo only when not already root
+if [ "$(id -u)" -eq 0 ]; then
+    SUDO=""
+else
+    if ! command -v sudo &> /dev/null; then
+        echo "Error: Not running as root and sudo is not available."
+        exit 1
+    fi
+    SUDO="sudo"
 fi
 
-sudo apt-get update
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-# FIT Dependencies: autoconf autopoint git-lfs zlib1g-dev
+# --- Fix Azure CLI apt source conflict ---
+if [ -f /etc/apt/sources.list.d/azure-cli.list ] && [ -f /etc/apt/sources.list.d/azure-cli.sources ]; then
+    echo "Removing duplicate Azure CLI apt source..."
+    $SUDO rm -f /etc/apt/sources.list.d/azure-cli.list
+fi
 
-sudo apt-get install -y \
-gawk \
-wget \
-git-core \
-git-lfs \
-diffstat \
-unzip \
-texinfo \
-gcc \
-build-essential \
-chrpath \
-socat \
-cpio \
-python3 \
-python3-pip \
-python3-pexpect \
-xz-utils \
-debianutils \
-iputils-ping \
-python3-git \
-python3-jinja2 \
-libegl1-mesa \
-libsdl1.2-dev \
-xterm \
-python3-subunit \
-mesa-common-dev \
-zstd \
-liblz4-tool \
-libcpprest-dev \
-libssl-dev \
-libproxy-dev \
-libncurses5-dev \
-tmux \
-bmap-tools \
-autoconf \
-autopoint
-
-#
-# Install git-lfs because recipe for iot-hub-device-update-delta requires it
-#
-echo "Running 'git lfs install' in current dir: $(pwd). Assuming it is root of repo..."
-git lfs install
-
-#
-# Install pylint3 on ubuntu 20.04; otherwise, install pylint 
-#
-#
+# --- Detect Ubuntu version ---
 get_ubuntu_version() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
-        echo $VERSION_ID
+        echo "$VERSION_ID"
     elif [ -f /etc/lsb-release ]; then
         . /etc/lsb-release
-        echo $DISTRIB_RELEASE
+        echo "$DISTRIB_RELEASE"
     else
         echo "Unknown"
     fi
 }
 
 UBUNTU_VERSION=$(get_ubuntu_version)
+echo "Detected Ubuntu version: $UBUNTU_VERSION"
 
-# Check the version and install the appropriate package
-if [ "$UBUNTU_VERSION" == "20.04" ]; then
-    echo "Detected Ubuntu 20.04. Installing pylint3..."
-    sudo apt-get update
-    sudo apt-get install -y pylint3
-elif [ "$UBUNTU_VERSION" == "22.04" ]; then
-    echo "Detected Ubuntu 22.04. Installing pylint..."
-    sudo apt-get update
-    sudo apt-get install -y pylint
-else
-    echo "Unsupported Ubuntu version: $UBUNTU_VERSION"
-    exit 1
-fi
+# --- Install apt packages ---
+$SUDO apt-get update
 
-#
-# Install .NET SDK for meta-iot-hub-device-update-delta native build tools
-# The DiffGenTool (delta diff generation) requires .NET 6 or 8 SDK on the host
-#
+# Common packages for all supported Ubuntu versions
+PACKAGES=(
+    gawk
+    wget
+    git
+    git-lfs
+    diffstat
+    unzip
+    texinfo
+    gcc
+    build-essential
+    chrpath
+    socat
+    cpio
+    python3
+    python3-pip
+    python3-pexpect
+    xz-utils
+    debianutils
+    iputils-ping
+    python3-git
+    python3-jinja2
+    xterm
+    python3-subunit
+    mesa-common-dev
+    zstd
+    liblz4-tool
+    libcpprest-dev
+    libssl-dev
+    libproxy-dev
+    libncurses5-dev
+    zlib1g-dev
+    tmux
+    bmap-tools
+    autoconf
+    autopoint
+)
+
+# libsdl1.2-dev was removed in Ubuntu 22.04+; use libsdl2-dev instead
+case "$UBUNTU_VERSION" in
+    20.04)
+        PACKAGES+=(libsdl1.2-dev pylint3 libegl1-mesa)
+        ;;
+    22.04)
+        PACKAGES+=(libsdl2-dev pylint libegl1-mesa)
+        ;;
+    24.04|24.10|25.*)
+        PACKAGES+=(libsdl2-dev pylint libegl-dev)
+        ;;
+    *)
+        echo "Warning: Untested Ubuntu version $UBUNTU_VERSION — attempting with 22.04+ package list."
+        PACKAGES+=(libsdl2-dev pylint)
+        ;;
+esac
+
+$SUDO apt-get install -y "${PACKAGES[@]}"
+
+# --- Setup git-lfs ---
+echo "Setting up git-lfs in repo: $REPO_ROOT"
+pushd "$REPO_ROOT" > /dev/null
+git lfs install
+popd > /dev/null
+
+# --- Install .NET SDK (for delta DiffGenTool) ---
 install_dotnet_sdk() {
     echo "Checking for .NET SDK..."
     if command -v dotnet &> /dev/null; then
@@ -99,29 +120,28 @@ install_dotnet_sdk() {
     fi
 
     echo "Installing .NET 8 SDK..."
-    
-    # Download and run the official dotnet install script
+
     wget -q https://dot.net/v1/dotnet-install.sh -O /tmp/dotnet-install.sh
     chmod +x /tmp/dotnet-install.sh
-    
-    # Install to /usr/share/dotnet (system-wide)
-    sudo /tmp/dotnet-install.sh --channel 8.0 --install-dir /usr/share/dotnet
-    
-    # Create symlink if not exists
+
+    $SUDO /tmp/dotnet-install.sh --channel 8.0 --install-dir /usr/share/dotnet
+
     if [ ! -f /usr/bin/dotnet ]; then
-        sudo ln -s /usr/share/dotnet/dotnet /usr/bin/dotnet
+        $SUDO ln -s /usr/share/dotnet/dotnet /usr/bin/dotnet
     fi
-    
-    # Verify installation
+
     if command -v dotnet &> /dev/null; then
         echo "✓ .NET SDK installed successfully: $(dotnet --version)"
     else
         echo "⚠ .NET SDK installation may have failed. Please verify manually."
         echo "  You can also install via: sudo apt-get install -y dotnet-sdk-8.0"
     fi
-    
+
     rm -f /tmp/dotnet-install.sh
 }
 
 install_dotnet_sdk
+
+echo ""
+echo "✓ All dependencies installed successfully."
 
