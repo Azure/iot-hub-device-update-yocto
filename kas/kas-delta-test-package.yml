@@ -1,0 +1,10 @@
+# kas-delta-test-package.yml - Build delta test package
+#
+# Builds the adu-delta-test-package with import manifests and test scripts.
+# Include after delta config:
+#   kas build kas/kas-base.yml:kas/kas-delta.yml:kas/kas-delta-test-package.yml
+#
+header:
+  version: 14
+
+target: adu-delta-test-package

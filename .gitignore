@@ -11,6 +11,8 @@ yocto/meta-raspberrypi-adu
 yocto/meta-raspberrypi
 yocto/meta-swupdate
 yocto/poky
+yocto/meta-azure-device-update-samples
+yocto/meta-clang
 keys/*
 adu-base-*image*.gz
 adu-update-*image*.swu
