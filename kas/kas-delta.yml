@@ -1,0 +1,23 @@
+# kas-delta.yml - Enable delta update support
+#
+# Builds versioned update images (v1, v2, v3) and delta diff artifacts.
+# Include after base config:
+#   kas build kas/kas-base.yml:kas/kas-delta.yml
+#
+# Prerequisites:
+#   - .NET SDK 8.0 installed on build host
+#   - NuGet packages pre-cached (dotnet restore)
+#
+header:
+  version: 14
+
+env:
+  WITH_FEATURE_DELTA_UPDATE: "1"
+
+target: adu-delta-image
+
+local_conf_header:
+  delta-settings: |
+    # Skip v1→v3 (skip-delta) generation on low-memory machines (<8GB RAM).
+    # Set to "1" to enable if your build host has sufficient memory.
+    ADU_GENERATE_V1_V3_DELTA = "1"

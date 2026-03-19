@@ -1,0 +1,16 @@
+# kas-wifi.yml - Enable WiFi and Bluetooth support
+#
+# Accepts the proprietary Broadcom BCM43455 firmware license.
+# Include after base config:
+#   kas build kas/kas-base.yml:kas/kas-wifi.yml
+#
+header:
+  version: 14
+
+env:
+  ENABLE_WIFI_BLUETOOTH: "1"
+
+local_conf_header:
+  wifi: |
+    LICENSE_FLAGS_ACCEPTED += "synaptics-killswitch"
+    ENABLE_WIFI_BLUETOOTH = "1"

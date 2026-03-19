@@ -1,0 +1,14 @@
+# kas-release.yml - Release build configuration
+#
+# Use instead of kas-debug.yml:
+#   kas build kas/kas-base.yml:kas/kas-release.yml
+#
+header:
+  version: 14
+
+env:
+  BUILD_TYPE: Release
+
+local_conf_header:
+  build-type: |
+    BUILD_TYPE = "Release"

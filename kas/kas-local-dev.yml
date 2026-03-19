@@ -1,0 +1,23 @@
+# kas-local-dev.yml - Use local source directories for development
+#
+# Point BitBake at local checkouts instead of fetching from GitHub.
+# Useful when iterating on ADU agent or delta library changes.
+#
+# Include after base config:
+#   kas build kas/kas-base.yml:kas/kas-local-dev.yml
+#
+# Default source paths (override via environment variables):
+#   ADU_LOCAL_SOURCE_DIR       = ~/adu_yocto/sources/iot-hub-device-update
+#   ADU_DELTA_LOCAL_SOURCE_DIR = ~/adu_yocto/sources/iot-hub-device-update-delta
+#   DO_LOCAL_SOURCE_DIR        = ~/adu_yocto/sources/do-client
+#
+header:
+  version: 14
+
+env:
+  USE_LOCAL_ADU_SOURCE: "1"
+  ADU_LOCAL_SOURCE_DIR: ${HOME}/adu_yocto/sources/iot-hub-device-update
+  USE_LOCAL_ADU_DELTA_SOURCE: "1"
+  ADU_DELTA_LOCAL_SOURCE_DIR: ${HOME}/adu_yocto/sources/iot-hub-device-update-delta
+  USE_LOCAL_DO_SOURCE: "1"
+  DO_LOCAL_SOURCE_DIR: ${HOME}/adu_yocto/sources/do-client

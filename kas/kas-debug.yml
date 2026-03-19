@@ -1,0 +1,15 @@
+# kas-debug.yml - Debug build configuration
+#
+# Included by kas-base.yml by default.
+# Override with kas-release.yml:
+#   kas build kas/kas-base.yml:kas/kas-release.yml
+#
+header:
+  version: 14
+
+env:
+  BUILD_TYPE: Debug
+
+local_conf_header:
+  build-type: |
+    BUILD_TYPE = "Debug"
