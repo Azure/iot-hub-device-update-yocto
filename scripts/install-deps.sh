@@ -104,6 +104,47 @@ esac
 
 $SUDO apt-get install -y "${PACKAGES[@]}"
 
+# --- Install kas (Yocto build tool) ---
+echo "Installing kas build tool..."
+pip install --user --break-system-packages kas 2>/dev/null || pip install --user kas 2>/dev/null || $SUDO pip install kas
+
+# --- Ubuntu 24.04+: Fix AppArmor restriction on unprivileged user namespaces ---
+# BitBake requires unprivileged user namespaces for pseudo and other build isolation.
+# Ubuntu 24.04 restricts this by default via AppArmor. Without this fix, BitBake will
+# fail with: "ERROR: User namespaces are not usable by BitBake, possibly due to AppArmor."
+# See: https://discourse.ubuntu.com/t/ubuntu-24-04-lts-noble-numbat-release-notes/39890
+if [[ "$UBUNTU_VERSION" == 24.* || "$UBUNTU_VERSION" == 25.* ]]; then
+    CURRENT_VALUE=$(sysctl -n kernel.apparmor_restrict_unprivileged_userns 2>/dev/null || echo "0")
+    if [ "$CURRENT_VALUE" = "1" ]; then
+        echo ""
+        echo "┌─────────────────────────────────────────────────────────────────────┐"
+        echo "│ Ubuntu $UBUNTU_VERSION: AppArmor restricts unprivileged user namespaces      │"
+        echo "│                                                                     │"
+        echo "│ BitBake requires user namespaces for build isolation. This setting   │"
+        echo "│ must be relaxed for Yocto builds to work.                           │"
+        echo "│                                                                     │"
+        echo "│ This will:                                                          │"
+        echo "│   • Allow unprivileged user namespace creation (used by BitBake)    │"
+        echo "│   • Persist across reboots via /etc/sysctl.d/99-bitbake-userns.conf │"
+        echo "│   • NOT affect other AppArmor protections                           │"
+        echo "└─────────────────────────────────────────────────────────────────────┘"
+        echo ""
+        read -p "Apply this fix? (yes/no): " -r
+        if [[ "$REPLY" =~ ^[Yy][Ee][Ss]$ ]] || [[ "$REPLY" =~ ^[Yy]$ ]]; then
+            echo 'kernel.apparmor_restrict_unprivileged_userns=0' | $SUDO tee /etc/sysctl.d/99-bitbake-userns.conf > /dev/null
+            $SUDO sysctl --system > /dev/null 2>&1
+            echo "✓ AppArmor user namespace restriction relaxed (persistent across reboots)."
+        else
+            echo "⚠ Skipped. BitBake builds will fail until this is resolved."
+            echo "  To apply manually later:"
+            echo "    echo 'kernel.apparmor_restrict_unprivileged_userns=0' | sudo tee /etc/sysctl.d/99-bitbake-userns.conf"
+            echo "    sudo sysctl --system"
+        fi
+    else
+        echo "✓ AppArmor user namespace restriction already relaxed."
+    fi
+fi
+
 # --- Setup git-lfs ---
 echo "Setting up git-lfs in repo: $REPO_ROOT"
 pushd "$REPO_ROOT" > /dev/null
