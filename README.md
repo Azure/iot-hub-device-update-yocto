@@ -41,6 +41,7 @@ See [Why Raspberry Pi 4?](#why-raspberry-pi-4) for rationale behind the referenc
 - [Quick Start](#quick-start)
 - [Prerequisites](#prerequisites)
 - [Delta Updates](#delta-updates-binary-diffpatch)
+- [Troubleshooting](#troubleshooting)
 - [Software Bill of Materials (SBOM)](#software-bill-of-materials-sbom)
 - [Build Pipelines](#build-pipelines-status)
 - [Porting to Your Own Hardware](#porting-to-your-own-hardware)
@@ -320,6 +321,9 @@ For more information on the Yocto build system, the open embedded base image, an
 sudo ./scripts/install-deps.sh
 ```
 
+> **Ubuntu 24.04+ users:** The install script will prompt you to relax an AppArmor restriction on unprivileged user namespaces. BitBake requires this for build isolation. The fix is persisted to `/etc/sysctl.d/99-bitbake-userns.conf` so it survives reboots. If you skip this step, BitBake builds will fail with:
+> `ERROR: User namespaces are not usable by BitBake, possibly due to AppArmor.`
+
 ### Creating the Private Key for Sw Update Signing
 
 To create the `*.swu` file you will need to provide the build system with a private key and password file so that it can sign the generated image and then create the Sw Update file. This is REQUIRED for a Sw Update update to function. You MUST put the private key and password file inside of the `repo-root-directory/keys` directory. The build will break if you do not complete this step.
@@ -329,7 +333,33 @@ You can find the instructions for generating the private key and creating the pa
 
 ### Build The Project
 
-To build the project you can either use our helper script or read the `build.sh` script and use your own terminal commands to build the layer. Keep in mind Yocto builds can take time depending on your machine. It's best to use a local cache if you're going to be running multiple builds. We use the `-o` option to specify the output directory which in turn builds a local cache that can expedite your local builds. An example invocation is specified below. It is executed from the repositories root folder. NOT the `yocto` directory.
+There are two ways to build: **kas** (recommended) or the legacy `build.sh` script.
+
+#### Option A: Build with kas (Recommended)
+
+[kas](https://kas.readthedocs.io/) is a standard Yocto build tool that uses declarative YAML configs. It is installed by `install-deps.sh`.
+
+```sh
+# Build base image (debug)
+kas build kas/kas-base.yml
+
+# Build base image (release)
+kas build kas/kas-base.yml:kas/kas-release.yml
+
+# Build with delta updates (debug)
+kas build kas/kas-base.yml:kas/kas-delta.yml
+
+# Full build: release + delta + wifi
+kas build kas/kas-base.yml:kas/kas-release.yml:kas/kas-delta.yml:kas/kas-wifi.yml
+```
+
+Output artifacts are in `build/tmp/deploy/images/raspberrypi4-64/`.
+
+See [BUILD-IMPROVEMENT.md](./BUILD-IMPROVEMENT.md) for details on the kas migration.
+
+#### Option B: Build with build.sh (Legacy)
+
+To build the project you can also use the legacy helper script. Keep in mind Yocto builds can take time depending on your machine. It's best to use a local cache if you're going to be running multiple builds. We use the `-o` option to specify the output directory which in turn builds a local cache that can expedite your local builds. An example invocation is specified below. It is executed from the repositories root folder. NOT the `yocto` directory.
 
 ```sh
 ./scripts/build.sh -c -t Debug -o ~/yocto_build_dir
@@ -423,9 +453,42 @@ For comprehensive delta update documentation including:
 
 **See:** [meta-azure-device-update-samples/README.md](yocto/meta-azure-device-update-samples/README.md) and [meta-iot-hub-device-update-delta/README.md](yocto/meta-iot-hub-device-update-delta/README.md)
 
-## Software Bill of Materials (SBOM)
+## Flashing and Verification
 
-### Overview
+### Flash SD Card
+
+Use the included flash tool to write the image to an SD card:
+
+```sh
+./scripts/flash-sdcard.sh \
+  --image build/tmp/deploy/images/raspberrypi4-64/adu-base-image-raspberrypi4-64.wic.gz \
+  --device /dev/sdX \
+  --verify
+```
+
+The `--verify` flag checks all 4 partitions (boot, rootA, rootB, adu) and confirms rootfs content on both A and B partitions.
+
+### Verifying Credential Persistence Across A/B Updates
+
+The ADU image stores user credentials on a persistent `/adu` partition that survives A/B rootfs switches. To verify this works:
+
+1. Flash and boot from rootA (default)
+2. Change root password: `passwd root`
+3. Switch to rootB: `fw_setenv boot_partition rootB && reboot`
+4. Log in with the same password — if it works, persistence is verified ✅
+
+For the full step-by-step procedure, including troubleshooting and expected results, see **[docs/flash-sdcard.md](docs/flash-sdcard.md)**.
+
+## Troubleshooting
+
+For known issues and solutions — including Ubuntu 24.04 compatibility, signing key
+configuration with kas, and OOM during delta generation — see
+**[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)**.
+
+For delta-generation-specific issues, see the
+[meta-azure-device-update-samples troubleshooting section](yocto/meta-azure-device-update-samples/README.md#troubleshooting).
+
+## Software Bill of Materials (SBOM)
 
 Yocto automatically generates comprehensive Software Bill of Materials (SBOM) in SPDX 2.2 format for all builds. The SBOM provides complete dependency tracking, license information, and package metadata for compliance and security auditing.
 
