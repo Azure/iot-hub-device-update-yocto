@@ -412,6 +412,16 @@ For comprehensive delta update documentation including:
 
 **See:** [meta-azure-device-update-samples/README.md](yocto/meta-azure-device-update-samples/README.md) and [meta-iot-hub-device-update-delta/README.md](yocto/meta-iot-hub-device-update-delta/README.md)
 
+### Customer Distribution
+
+To package the delta tools for customer delivery (standalone, without requiring a Yocto build environment):
+
+```sh
+./scripts/package-delta-tools.sh --build-dir ~/adu_yocto/out/build --version 3.0.0
+```
+
+This produces self-contained tarballs with all dependencies bundled. See the [Delta Tools Distribution Guide](docs/delta-tools-distribution.md) for full details including architecture, dependency inventory, supported platforms, and security considerations.
+
 ## Software Bill of Materials (SBOM)
 
 ### Overview

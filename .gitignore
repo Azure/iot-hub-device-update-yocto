@@ -17,3 +17,4 @@ adu-update-*image*.swu
 build-*.sh
 drop-*.sh
 zip-*.sh
+artifacts/

@@ -1,0 +1,51 @@
+# ADU Delta Tools — Generation & Apply
+# Packages pre-built Yocto artifacts into a portable container.
+#
+# Yocto-built binaries use a hardcoded dynamic linker (uninative).
+# package-delta-tools.sh patches them with patchelf before packaging.
+#
+# Usage:
+#   # Build (after running package-delta-tools.sh):
+#   docker build -t adu-delta-tools -f docker/Dockerfile.delta-tools artifacts/
+#
+#   # Generate a delta:
+#   docker run --rm -v $PWD/swus:/data adu-delta-tools \
+#       diffgentool /data/source.swu /data/target.swu /data/delta.diff /data/work
+#
+#   # Apply a delta (reconstitute target):
+#   docker run --rm -v $PWD/swus:/data adu-delta-tools \
+#       applydiff /data/source.swu /data/delta.diff /data/target-reconstructed.swu
+
+# Binaries must be pre-patched on the host (package-delta-tools.sh does this
+# automatically via patchelf) so they use /lib64/ld-linux-x86-64.so.2 instead
+# of the Yocto uninative interpreter.
+
+FROM ubuntu:22.04
+
+LABEL maintainer="Azure Device Update <adu-eng@microsoft.com>"
+LABEL description="ADU Delta Update Tools — generation and reconstitution"
+LABEL org.opencontainers.image.source="https://github.com/Azure/iot-hub-device-update-yocto"
+
+# .NET self-contained binary includes the runtime.
+# Use invariant globalization to avoid ICU dependency.
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+
+# Copy pre-patched binaries, libraries, and metadata
+ARG GEN_PKG_DIR=adu-delta-gen-tools-x86_64-3.0.0
+COPY ${GEN_PKG_DIR}/bin/ /opt/adu-delta-tools/bin/
+COPY ${GEN_PKG_DIR}/lib/ /opt/adu-delta-tools/lib/
+COPY ${GEN_PKG_DIR}/SBOM.json /opt/adu-delta-tools/
+COPY ${GEN_PKG_DIR}/VERSION /opt/adu-delta-tools/
+COPY ${GEN_PKG_DIR}/README.md /opt/adu-delta-tools/
+
+# Set up library and tool paths
+ENV LD_LIBRARY_PATH="/opt/adu-delta-tools/lib"
+ENV PATH="/opt/adu-delta-tools/bin:${PATH}"
+
+# Create working directory for delta operations
+RUN mkdir -p /data /work
+
+WORKDIR /data
+
+# Default: show help — call .bin directly since LD_LIBRARY_PATH is already set
+CMD ["diffgentool.bin", "--help"]
