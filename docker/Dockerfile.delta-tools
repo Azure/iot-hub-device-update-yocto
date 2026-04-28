@@ -20,7 +20,7 @@
 # automatically via patchelf) so they use /lib64/ld-linux-x86-64.so.2 instead
 # of the Yocto uninative interpreter.
 
-FROM ubuntu:22.04
+FROM mcr.microsoft.com/mirror/docker/library/ubuntu:22.04
 
 LABEL maintainer="Azure Device Update <adu-eng@microsoft.com>"
 LABEL description="ADU Delta Update Tools — generation and reconstitution"
