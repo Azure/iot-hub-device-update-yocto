@@ -59,7 +59,7 @@ Usage: build.sh [options...]
     --do-git-commit <commit hash>    Set the commit hash for the DO client repo.
 
     --with-delta-update '1'|'0'      Allows enabling and disabling delta recipe. Default is '1' to enable.
-    --adu-delta-git-branch <branch>  Set the ADU Delta branch to build. Default is v2/scarthgap.
+    --adu-delta-git-branch <branch>  Set the ADU Delta branch to build. Default is feature/vnext-delta.
     --enable-wifi-bluetooth          Enable WiFi/Bluetooth support (requires accepting proprietary BCM43455 firmware license).
     --build-uboot-debug-script       Build and deploy debug version of U-Boot boot script (boot.scr.debug).
                                      Provides verbose logging for troubleshooting boot issues.
@@ -127,9 +127,9 @@ WITH_FEATURE_DELTA_UPDATE='1'
 # WITH_FEATURE_DELTA_UPDATE='0'
 
 # Defaults - Gen 1 and Gen 2
-ADU_DELTA_GIT_BRANCH='user/nox-msft/scarthgap'
+ADU_DELTA_GIT_BRANCH='feature/vnext-delta'
 ADU_DELTA_GIT_COMMIT=''
-ADU_DELTA_SRC_URI='gitsm://github.com/Azure/iot-hub-device-update-delta'
+ADU_DELTA_SRC_URI='git://github.com/Azure/iot-hub-device-update-delta.git'
 ADU_DELTA_LOCAL_SRC=''
 ADU_DELTA_SKIP_PATCHES='0'
 
