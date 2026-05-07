@@ -1,0 +1,51 @@
+header:
+  version: 14
+
+# Add remote URLs for CI/fresh-clone builds
+# Usage: kas build kas/base.yml:kas/machine-qemu.yml:kas/remote.yml
+#
+# For local development, omit this file — kas uses existing local clones.
+# For CI pipelines, include this to enable automatic git clone/fetch.
+
+defaults:
+  repos:
+    branch: scarthgap
+
+repos:
+  poky:
+    url: "https://git.yoctoproject.org/poky"
+
+  meta-openembedded:
+    url: "https://git.openembedded.org/meta-openembedded"
+
+  meta-clang:
+    url: "https://github.com/kraj/meta-clang.git"
+
+  meta-swupdate:
+    url: "https://github.com/sbabic/meta-swupdate.git"
+
+  meta-iot-hub-device-update-delta:
+    url: "https://github.com/Azure/iot-hub-device-update-delta.git"
+    branch: feature/vnext-delta
+
+  meta-azure-device-update:
+    url: "https://github.com/Azure/meta-azure-device-update.git"
+    branch: user/msft/nox-msft/new-yocto-poc
+
+  meta-raspberrypi:
+    url: "https://git.yoctoproject.org/meta-raspberrypi"
+
+  meta-raspberrypi-adu:
+    url: "https://github.com/Azure/meta-raspberrypi-adu.git"
+    branch: user/msft/nox-msft/new-yocto-poc
+
+  meta-qemu-adu:
+    url: "https://github.com/Azure/meta-qemu-adu.git"
+    branch: user/msft/nox-msft/new-yocto-poc
+
+  meta-freescale:
+    url: "https://github.com/Freescale/meta-freescale.git"
+
+  meta-imx8ulp-adu:
+    url: "https://github.com/Azure/meta-imx8ulp-adu.git"
+    branch: user/msft/nox-msft/new-yocto-poc

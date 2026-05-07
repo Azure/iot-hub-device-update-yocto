@@ -4,11 +4,10 @@ header:
     - base.yml
 
 machine: qemuarm64
+target: adu-base-image
 
 repos:
   meta-qemu-adu:
-    url: "https://github.com/Azure/meta-qemu-adu.git"
-    branch: user/msft/nox-msft/new-yocto-poc
     path: ../meta-qemu-adu
 
 local_conf_header:

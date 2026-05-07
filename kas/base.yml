@@ -12,7 +12,6 @@ defaults:
 
 repos:
   poky:
-    url: "https://git.yoctoproject.org/poky"
     path: ../poky
     layers:
       meta:
@@ -20,7 +19,6 @@ repos:
       meta-yocto-bsp:
 
   meta-openembedded:
-    url: "https://git.openembedded.org/meta-openembedded"
     path: ../meta-openembedded
     layers:
       meta-oe:
@@ -29,28 +27,17 @@ repos:
       meta-python:
 
   meta-clang:
-    url: "https://github.com/kraj/meta-clang.git"
     path: ../meta-clang
 
   meta-swupdate:
-    url: "https://github.com/sbabic/meta-swupdate.git"
     path: ../meta-swupdate
 
-  meta-iot-hub-device-update-delta:
-    url: "https://github.com/Azure/iot-hub-device-update-delta.git"
-    branch: feature/vnext-delta
-    path: ../meta-iot-hub-device-update-delta
-    layers:
-      meta-iot-hub-device-update-delta:
-
   meta-azure-device-update:
-    url: "https://github.com/Azure/meta-azure-device-update.git"
-    branch: user/msft/nox-msft/new-yocto-poc
     path: ../meta-azure-device-update
 
 local_conf_header:
   base: |
-    DISTRO_FEATURES:append = " systemd"
+    DISTRO_FEATURES:append = " systemd usrmerge"
     DISTRO_FEATURES_BACKFILL_CONSIDERED += "sysvinit"
     VIRTUAL-RUNTIME_init_manager = "systemd"
     VIRTUAL-RUNTIME_initscripts = "systemd-compat-units"

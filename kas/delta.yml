@@ -1,0 +1,17 @@
+header:
+  version: 14
+
+# Optional: Add delta update support (requires .NET SDK on build host)
+# Usage: kas build kas/base.yml:kas/machine-qemu.yml:kas/delta.yml
+#
+# Prerequisites:
+#   Install .NET SDK: https://dotnet.microsoft.com/download
+#   Ensure 'dotnet' is in PATH
+
+repos:
+  meta-iot-hub-device-update-delta:
+    path: ../meta-iot-hub-device-update-delta
+
+local_conf_header:
+  delta: |
+    WITH_FEATURE_DELTA_UPDATE = "1"

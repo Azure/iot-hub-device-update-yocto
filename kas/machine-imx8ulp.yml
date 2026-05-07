@@ -4,15 +4,13 @@ header:
     - base.yml
 
 machine: imx8ulp-lpddr4-evk
+target: adu-base-image
 
 repos:
   meta-freescale:
-    url: "https://github.com/Freescale/meta-freescale.git"
     path: ../meta-freescale
 
   meta-imx8ulp-adu:
-    url: "https://github.com/Azure/meta-imx8ulp-adu.git"
-    branch: user/msft/nox-msft/new-yocto-poc
     path: ../meta-imx8ulp-adu
 
 local_conf_header:
