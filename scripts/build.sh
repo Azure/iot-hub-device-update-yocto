@@ -100,6 +100,14 @@ Usage: build.sh [options...]
     -o, --out-dir <build_dir>        Set the build output directory. Default is build.
     --verbose                        Add -v to bitbake cmdline for verbose output.
 
+    -m, --machine <machine>          Target machine to build for.
+                                     Known machines: raspberrypi4-64, richter-imx8
+                                     Default is raspberrypi4-64.
+    --templateconf <path>            Override TEMPLATECONF path for custom board layers.
+                                     Use this for boards not known to the script.
+    --board-layer <path>             Path to the board-specific ADU meta-layer.
+                                     Default is derived from the machine name.
+
     -j, --jobs <number>              Number of parallel tasks BitBake should run. Default is number of CPU cores.
     --parallel-make <number>         Number of processes 'make' should run in parallel. Default is number of CPU cores.
 
@@ -167,6 +175,9 @@ SHOW_RECIPES=0
 BB_NUMBER_THREADS=''
 PARALLEL_MAKE=''
 UNATTENDED=false
+MACHINE_ARG=''
+TEMPLATECONF_ARG=''
+BOARD_LAYER_ARG=''
 
 while [[ $1 != "" ]]; do
     case $1 in
@@ -358,6 +369,18 @@ while [[ $1 != "" ]]; do
     --unattended | -y)
         UNATTENDED=true
         ;;
+    -m | --machine)
+        shift
+        MACHINE_ARG="$1"
+        ;;
+    --templateconf)
+        shift
+        TEMPLATECONF_ARG="$1"
+        ;;
+    --board-layer)
+        shift
+        BOARD_LAYER_ARG="$1"
+        ;;
     *)
         echo "Unknown option: $1" >&2
         print_help
@@ -367,9 +390,51 @@ while [[ $1 != "" ]]; do
     shift
 done
 
-export MACHINE='raspberrypi4-64'
+## Machine and board layer selection
+# Resolve MACHINE: command-line arg > default (raspberrypi4-64)
+if [ -n "${MACHINE_ARG}" ]; then
+    export MACHINE="${MACHINE_ARG}"
+else
+    export MACHINE='raspberrypi4-64'
+fi
+
 export ADU_GENERATION="$ADU_GEN"
 export ADU_EMBED_TEST_ROOT_KEYS="$ADU_EMBED_TEST_ROOT_KEYS"
+
+# Resolve board-specific ADU meta-layer and TEMPLATECONF
+# Priority: --templateconf > --board-layer > known machine defaults
+if [ -n "${TEMPLATECONF_ARG}" ]; then
+    # Explicit templateconf override — used by customers with their own board layer
+    export TEMPLATECONF="${TEMPLATECONF_ARG}"
+    echo "Using custom TEMPLATECONF: ${TEMPLATECONF}"
+elif [ -n "${BOARD_LAYER_ARG}" ]; then
+    # Customer-supplied board layer path
+    export TEMPLATECONF="${BOARD_LAYER_ARG}/conf/templates/${MACHINE}/"
+    echo "Using board layer: ${BOARD_LAYER_ARG}"
+    echo "Derived TEMPLATECONF: ${TEMPLATECONF}"
+else
+    # Map known machines to their board-specific ADU meta-layer
+    case "${MACHINE}" in
+        raspberrypi4-64|raspberrypi3)
+            BOARD_LAYER="meta-raspberrypi-adu"
+            ;;
+        richter-imx8)
+            BOARD_LAYER="meta-richter-adu"
+            ;;
+        *)
+            echo "ERROR: Unknown machine '${MACHINE}'."
+            echo "Known machines: raspberrypi4-64, raspberrypi3, richter-imx8"
+            echo ""
+            echo "For custom boards, use one of:"
+            echo "  --board-layer <path>     Path to your board-specific ADU meta-layer"
+            echo "  --templateconf <path>    Direct path to TEMPLATECONF directory"
+            exit 1
+            ;;
+    esac
+    export TEMPLATECONF="${ROOT_DIR}/${BOARD_LAYER}/conf/templates/${MACHINE}/"
+fi
+
+echo "Building for MACHINE: ${MACHINE}"
 
 # Process --local-sources argument
 if [ -n "${LOCAL_SOURCES}" ]; then
@@ -401,8 +466,7 @@ if [ -n "${LOCAL_SOURCES}" ]; then
     done
 fi
 
-# Need to work on what this is
-export TEMPLATECONF=$ROOT_DIR/meta-raspberrypi-adu/conf/templates/$MACHINE/
+# TEMPLATECONF is set above based on --machine, --board-layer, or --templateconf
 
 if [ -n "${ADU_SRC_URI}" ]; then
     export ADU_SRC_URI

@@ -341,6 +341,12 @@ To build the project you can either use our helper script or read the `build.sh`
 
 # Full rebuild with cache preservation
 ./scripts/build.sh --rebuild -t Debug -o ~/yocto_build_dir --adu-git-branch feature/v-next
+
+# Build for a different board (e.g., Richter i.MX8)
+./scripts/build.sh -m richter-imx8 -t Debug -o ~/yocto_build_dir
+
+# Build for a custom board with your own ADU meta-layer
+./scripts/build.sh -m my-custom-board --board-layer /path/to/meta-myboard-adu -o ~/yocto_build_dir
 ```
 
 You can use:
@@ -538,7 +544,30 @@ syft convert ./adu-base-image-raspberrypi4-64.spdx.tar.zst -o cyclonedx-json
 
 ### Overview
 
-The `meta-raspberrypi-adu` layer provided in this repository demonstrates a complete A/B update implementation for Raspberry Pi 4. To enable Azure Device Update on your custom hardware, you'll need to **port** this reference implementation by adapting it to your device's specific characteristics.
+The `meta-raspberrypi-adu` layer provided in this repository demonstrates a complete A/B update implementation for Raspberry Pi 4. The `meta-richter-adu` layer provides a second reference for NXP i.MX8-based boards. To enable Azure Device Update on your custom hardware, you'll need to **port** one of these reference implementations by adapting it to your device's specific characteristics.
+
+### Supported Boards
+
+| Board | Machine Name | Meta-Layer | BSP Dependency | Status |
+|-------|-------------|------------|----------------|--------|
+| Raspberry Pi 4 | `raspberrypi4-64` | `meta-raspberrypi-adu` | `meta-raspberrypi` | Reference implementation |
+| Richter i.MX8 | `richter-imx8` | `meta-richter-adu` | `meta-freescale` | Board validation required |
+
+### Build for a Specific Board
+
+```sh
+# Raspberry Pi 4 (default)
+./scripts/build.sh -o ~/yocto_build_dir
+
+# Richter i.MX8
+./scripts/build.sh -m richter-imx8 -o ~/yocto_build_dir
+
+# Custom board with your own ADU meta-layer
+./scripts/build.sh -m my-board --board-layer /path/to/meta-myboard-adu -o ~/yocto_build_dir
+
+# Custom board with explicit TEMPLATECONF
+./scripts/build.sh -m my-board --templateconf /path/to/templates/my-board/ -o ~/yocto_build_dir
+```
 
 ### Prerequisites for Porting
 
