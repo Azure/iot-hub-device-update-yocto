@@ -1,0 +1,67 @@
+header:
+  version: 14
+  includes: []
+
+machine: qemuarm64
+
+distro: poky
+
+defaults:
+  repos:
+    branch: scarthgap
+
+repos:
+  poky:
+    url: "https://git.yoctoproject.org/poky"
+    path: ../poky
+    layers:
+      meta:
+      meta-poky:
+      meta-yocto-bsp:
+
+  meta-openembedded:
+    url: "https://git.openembedded.org/meta-openembedded"
+    path: ../meta-openembedded
+    layers:
+      meta-oe:
+      meta-multimedia:
+      meta-networking:
+      meta-python:
+
+  meta-clang:
+    url: "https://github.com/kraj/meta-clang.git"
+    path: ../meta-clang
+
+  meta-swupdate:
+    url: "https://github.com/sbabic/meta-swupdate.git"
+    path: ../meta-swupdate
+
+  meta-iot-hub-device-update-delta:
+    url: "https://github.com/Azure/iot-hub-device-update-delta.git"
+    branch: feature/vnext-delta
+    path: ../meta-iot-hub-device-update-delta
+    layers:
+      meta-iot-hub-device-update-delta:
+
+  meta-azure-device-update:
+    url: "https://github.com/Azure/meta-azure-device-update.git"
+    branch: user/msft/nox-msft/new-yocto-poc
+    path: ../meta-azure-device-update
+
+local_conf_header:
+  base: |
+    DISTRO_FEATURES:append = " systemd"
+    DISTRO_FEATURES_BACKFILL_CONSIDERED += "sysvinit"
+    VIRTUAL-RUNTIME_init_manager = "systemd"
+    VIRTUAL-RUNTIME_initscripts = "systemd-compat-units"
+    PACKAGE_CLASSES ?= "package_ipk"
+    EXTRA_IMAGE_FEATURES ?= "debug-tweaks"
+    USER_CLASSES ?= "buildstats"
+    PATCHRESOLVE = "noop"
+    CONF_VERSION = "2"
+  cache: |
+    DL_DIR ?= "${TOPDIR}/../downloads"
+    SSTATE_DIR ?= "${TOPDIR}/../sstate-cache"
+  parallel: |
+    BB_NUMBER_THREADS ?= "14"
+    PARALLEL_MAKE ?= "-j 14"

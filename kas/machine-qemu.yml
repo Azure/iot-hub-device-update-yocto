@@ -1,0 +1,18 @@
+header:
+  version: 14
+  includes:
+    - base.yml
+
+machine: qemuarm64
+
+repos:
+  meta-qemu-adu:
+    url: "https://github.com/Azure/meta-qemu-adu.git"
+    branch: user/msft/nox-msft/new-yocto-poc
+    path: ../meta-qemu-adu
+
+local_conf_header:
+  qemu: |
+    # QEMU specific
+    IMAGE_BOOT_FILES = "Image boot.scr"
+    UBOOT_MACHINE = "qemu_arm64_defconfig"

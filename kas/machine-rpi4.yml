@@ -1,0 +1,25 @@
+header:
+  version: 14
+  includes:
+    - base.yml
+
+machine: raspberrypi4-64
+
+repos:
+  meta-raspberrypi:
+    url: "https://git.yoctoproject.org/meta-raspberrypi"
+    path: ../meta-raspberrypi
+
+  meta-raspberrypi-adu:
+    url: "https://github.com/Azure/meta-raspberrypi-adu.git"
+    branch: user/msft/nox-msft/new-yocto-poc
+    path: ../meta-raspberrypi-adu
+
+build_system: oe
+
+local_conf_header:
+  rpi: |
+    # RPi4 specific
+    ENABLE_UART = "1"
+    RPI_USE_U_BOOT = "1"
+    IMAGE_BOOT_FILES += "boot.scr"

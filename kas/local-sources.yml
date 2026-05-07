@@ -1,0 +1,49 @@
+header:
+  version: 14
+
+# Override repos to use local paths only (no fetch)
+# Usage: kas build kas/base.yml:kas/machine-qemu.yml:kas/local-sources.yml
+repos:
+  poky:
+    path: ../poky
+    url: null
+
+  meta-openembedded:
+    path: ../meta-openembedded
+    url: null
+
+  meta-clang:
+    path: ../meta-clang
+    url: null
+
+  meta-swupdate:
+    path: ../meta-swupdate
+    url: null
+
+  meta-iot-hub-device-update-delta:
+    path: ../meta-iot-hub-device-update-delta
+    url: null
+
+  meta-azure-device-update:
+    path: ../meta-azure-device-update
+    url: null
+
+  meta-raspberrypi:
+    path: ../meta-raspberrypi
+    url: null
+
+  meta-raspberrypi-adu:
+    path: ../meta-raspberrypi-adu
+    url: null
+
+  meta-qemu-adu:
+    path: ../meta-qemu-adu
+    url: null
+
+  meta-freescale:
+    path: ../meta-freescale
+    url: null
+
+  meta-imx8ulp-adu:
+    path: ../meta-imx8ulp-adu
+    url: null
