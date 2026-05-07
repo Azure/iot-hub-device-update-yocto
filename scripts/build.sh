@@ -101,7 +101,7 @@ Usage: build.sh [options...]
     --verbose                        Add -v to bitbake cmdline for verbose output.
 
     -m, --machine <machine>          Target machine to build for.
-                                     Known machines: raspberrypi4-64, richter-imx8
+                                     Known machines: raspberrypi4-64, richter-imx8, qemuarm64
                                      Default is raspberrypi4-64.
     --templateconf <path>            Override TEMPLATECONF path for custom board layers.
                                      Use this for boards not known to the script.
@@ -421,9 +421,12 @@ else
         richter-imx8)
             BOARD_LAYER="meta-richter-adu"
             ;;
+        qemuarm64)
+            BOARD_LAYER="meta-qemu-adu"
+            ;;
         *)
             echo "ERROR: Unknown machine '${MACHINE}'."
-            echo "Known machines: raspberrypi4-64, raspberrypi3, richter-imx8"
+            echo "Known machines: raspberrypi4-64, raspberrypi3, richter-imx8, qemuarm64"
             echo ""
             echo "For custom boards, use one of:"
             echo "  --board-layer <path>     Path to your board-specific ADU meta-layer"
