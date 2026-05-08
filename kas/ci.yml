@@ -1,0 +1,70 @@
+header:
+  version: 14
+  includes: []
+
+# CI overlay: provides git URLs for all repos so kas can auto-clone on fresh VMs.
+# Usage: kas build kas/machine-rpi4.yml:kas/ci.yml
+#
+# On developer machines, repos are pre-cloned under ../
+# On CI, this overlay provides URLs so kas fetches them automatically.
+
+repos:
+  poky:
+    url: "https://git.yoctoproject.org/poky"
+    branch: scarthgap
+
+  meta-openembedded:
+    url: "https://git.openembedded.org/meta-openembedded"
+    branch: scarthgap
+
+  meta-clang:
+    url: "https://github.com/kraj/meta-clang.git"
+    branch: scarthgap
+
+  meta-swupdate:
+    url: "https://github.com/sbabic/meta-swupdate.git"
+    branch: scarthgap
+
+  meta-raspberrypi:
+    url: "https://git.yoctoproject.org/meta-raspberrypi"
+    branch: scarthgap
+
+  meta-freescale:
+    url: "https://github.com/Freescale/meta-freescale.git"
+    branch: scarthgap
+
+  meta-azure-device-update:
+    url: "https://github.com/Azure/meta-azure-device-update.git"
+    branch: feature/vnext-delta
+
+  meta-iot-hub-device-update-delta:
+    url: "https://github.com/Azure/meta-iot-hub-device-update-delta.git"
+    branch: feature/vnext-delta
+
+  meta-azure-device-update-samples:
+    url: "https://github.com/Azure/meta-azure-device-update-samples.git"
+    branch: feature/vnext-delta
+
+  meta-raspberrypi-adu:
+    url: "https://github.com/Azure/meta-raspberrypi-adu.git"
+    branch: feature/vnext-delta
+
+  meta-qemu-adu:
+    url: "https://github.com/Azure/meta-qemu-adu.git"
+    branch: feature/vnext-delta
+
+  meta-imx8ulp-adu:
+    url: "https://github.com/Azure/meta-imx8ulp-adu.git"
+    branch: feature/vnext-delta
+
+local_conf_header:
+  ci-override: |
+    # CI: Use remote ADU source (not local file:// path)
+    ADU_SRC_URI = "git://github.com/Azure/iot-hub-device-update"
+    ADU_GIT_PROTOCOL = "https"
+    ADU_GIT_BRANCH = "feature/vnext-delta"
+    ADU_GIT_COMMIT = "${AUTOREV}"
+  ci-cache: |
+    # CI: Use environment-provided cache dirs (set by pipeline)
+    DL_DIR ?= "${TOPDIR}/../downloads"
+    SSTATE_DIR ?= "${TOPDIR}/../sstate-cache"
