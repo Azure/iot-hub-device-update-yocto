@@ -70,6 +70,12 @@ local_conf_header:
   cache: |
     DL_DIR ?= "${TOPDIR}/../downloads"
     SSTATE_DIR ?= "${TOPDIR}/../sstate-cache"
+    # Also check previous per-build caches (hashes match even for moved recipes
+    # since FILE is excluded from BB_BASEHASH_IGNORE_VARS)
+    SSTATE_MIRRORS ?= " \
+        file://.* file:///home/yocto/build_qemu/sstate-cache/PATH \
+        file://.* file:///home/yocto/build_out/sstate-cache/PATH \
+    "
   parallel: |
     BB_NUMBER_THREADS ?= "14"
     PARALLEL_MAKE ?= "-j 14"
