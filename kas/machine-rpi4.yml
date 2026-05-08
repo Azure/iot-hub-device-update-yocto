@@ -4,7 +4,11 @@ header:
     - base.yml
 
 machine: raspberrypi4-64
-target: adu-base-image
+target:
+  - adu-base-image
+  - adu-update-image-v1
+  - adu-update-image-v2
+  - adu-update-image-v3
 
 repos:
   meta-raspberrypi:

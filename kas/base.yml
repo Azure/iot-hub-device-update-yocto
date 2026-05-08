@@ -35,6 +35,12 @@ repos:
   meta-azure-device-update:
     path: ../meta-azure-device-update
 
+  meta-iot-hub-device-update-delta:
+    path: ../meta-iot-hub-device-update-delta
+
+  meta-azure-device-update-samples:
+    path: ../meta-azure-device-update-samples
+
 local_conf_header:
   base: |
     DISTRO_FEATURES:append = " systemd usrmerge"
@@ -46,6 +52,21 @@ local_conf_header:
     USER_CLASSES ?= "buildstats"
     PATCHRESOLVE = "noop"
     CONF_VERSION = "2"
+  samples: |
+    # Disable delta updates by default (requires .NET SDK on build host)
+    WITH_FEATURE_DELTA_UPDATE = "0"
+    # Mask delta-only recipes that require .NET DiffGenTool
+    BBMASK:append = " meta-azure-device-update-samples/recipes-samples/delta-generation"
+    BBMASK:append = " meta-azure-device-update-samples/recipes-samples/adu-delta-test-package"
+    # SWUpdate signing keys (generated test keys for dev builds)
+    ADUC_PRIVATE_KEY = "${TOPDIR}/conf/swupdate-signing/priv.pem"
+    ADUC_PRIVATE_KEY_PASSWORD = "${TOPDIR}/conf/swupdate-signing/priv.pass"
+  adu-source: |
+    # Use local clone of ADU agent source (avoids fetching from GitHub)
+    ADU_SRC_URI = "git:///home/yocto/sources/iot-hub-device-update"
+    ADU_GIT_PROTOCOL = "file"
+    ADU_GIT_BRANCH = "feature/vnext-delta"
+    ADU_GIT_COMMIT = "b82004ebe45cc7bd936c8f4301941efddc95f363"
   cache: |
     DL_DIR ?= "${TOPDIR}/../downloads"
     SSTATE_DIR ?= "${TOPDIR}/../sstate-cache"

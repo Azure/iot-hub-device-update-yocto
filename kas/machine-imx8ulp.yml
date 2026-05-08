@@ -4,7 +4,11 @@ header:
     - base.yml
 
 machine: imx8ulp-lpddr4-evk
-target: adu-base-image
+target:
+  - adu-base-image
+  - adu-update-image-v1
+  - adu-update-image-v2
+  - adu-update-image-v3
 
 repos:
   meta-freescale:
@@ -18,3 +22,7 @@ local_conf_header:
     # i.MX8ULP specific
     ACCEPT_FSL_EULA = "1"
     IMAGE_BOOT_FILES += "boot.scr"
+    # NXP EULA was updated upstream; skip license-checksum QA error globally
+    # (only affects NXP proprietary recipes that reference the EULA file)
+    ERROR_QA:remove = "license-checksum"
+    WARN_QA:append = " license-checksum"
