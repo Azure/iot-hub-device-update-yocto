@@ -35,17 +35,9 @@ repos:
   meta-raspberrypi:
     url: "https://git.yoctoproject.org/meta-raspberrypi"
 
-  meta-raspberrypi-adu:
-    url: "https://github.com/Azure/meta-raspberrypi-adu.git"
-    branch: user/msft/nox-msft/new-yocto-poc
-
-  meta-qemu-adu:
-    url: "https://github.com/Azure/meta-qemu-adu.git"
-    branch: user/msft/nox-msft/new-yocto-poc
-
   meta-freescale:
     url: "https://github.com/Freescale/meta-freescale.git"
 
-  meta-imx8ulp-adu:
-    url: "https://github.com/Azure/meta-imx8ulp-adu.git"
+  meta-azure-device-update-bsp:
+    url: "https://github.com/Azure/meta-azure-device-update-bsp.git"
     branch: user/msft/nox-msft/new-yocto-poc

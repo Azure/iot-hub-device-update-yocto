@@ -14,8 +14,8 @@ repos:
   meta-raspberrypi:
     path: ../meta-raspberrypi
 
-  meta-raspberrypi-adu:
-    path: ../meta-raspberrypi-adu
+  meta-azure-device-update-bsp:
+    path: ../meta-azure-device-update-bsp
 
 local_conf_header:
   rpi: |

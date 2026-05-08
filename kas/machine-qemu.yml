@@ -11,8 +11,8 @@ target:
   - adu-update-image-v3
 
 repos:
-  meta-qemu-adu:
-    path: ../meta-qemu-adu
+  meta-azure-device-update-bsp:
+    path: ../meta-azure-device-update-bsp
 
 local_conf_header:
   qemu: |

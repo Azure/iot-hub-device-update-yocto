@@ -38,14 +38,8 @@ repos:
   meta-azure-device-update-samples:
     url: "https://github.com/Azure/meta-azure-device-update-samples.git"
 
-  meta-raspberrypi-adu:
-    url: "https://github.com/Azure/meta-raspberrypi-adu.git"
-
-  meta-qemu-adu:
-    url: "https://github.com/Azure/meta-qemu-adu.git"
-
-  meta-imx8ulp-adu:
-    url: "https://github.com/Azure/meta-imx8ulp-adu.git"
+  meta-azure-device-update-bsp:
+    url: "https://github.com/Azure/meta-azure-device-update-bsp.git"
 
 local_conf_header:
   ci-override: |

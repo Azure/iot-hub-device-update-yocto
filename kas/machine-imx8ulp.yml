@@ -14,8 +14,8 @@ repos:
   meta-freescale:
     path: ../meta-freescale
 
-  meta-imx8ulp-adu:
-    path: ../meta-imx8ulp-adu
+  meta-azure-device-update-bsp:
+    path: ../meta-azure-device-update-bsp
 
 local_conf_header:
   imx8ulp: |
