@@ -193,6 +193,130 @@ Overlays stack freely:
 KAS_BUILD_DIR=build_qemu kas build kas/base.yml:kas/machine-qemu.yml:kas/debug.yml:kas/delta.yml
 ```
 
+## Building a QEMU Image with the ADU Agent
+
+The QEMU ARM64 target lets you build, test, and validate the full Azure Device
+Update agent integration without physical hardware. This is ideal for CI
+pipelines, feature development, and end-to-end update testing.
+
+### What the QEMU Image Includes
+
+The `adu-base-image` for QEMU produces a complete A/B dual-root image with:
+
+- **Azure Device Update agent** — pre-integrated and ready to connect to IoT Hub
+- **A/B root partitions** — dual rootfs layout for seamless OTA updates
+- **U-Boot boot management** — automated partition switching, retry counting,
+  and rollback on failure
+- **SWUpdate framework** — handles image installation to the inactive partition
+- **Persistent U-Boot environment** — stored on pflash (survives reboots)
+- **Boot health monitoring** — automatic rollback if the agent fails after update
+
+### Build Command
+
+```bash
+cd sources/iot-hub-device-update-yocto
+
+# Standard build
+KAS_BUILD_DIR=build_qemu kas build kas/base.yml:kas/machine-qemu.yml
+
+# With debug tools (gdb, strace)
+KAS_BUILD_DIR=build_qemu kas build kas/base.yml:kas/machine-qemu.yml:kas/debug.yml
+
+# With delta update support (requires .NET SDK)
+KAS_BUILD_DIR=build_qemu kas build kas/base.yml:kas/machine-qemu.yml:kas/delta.yml
+```
+
+### Build Output
+
+After a successful build, the image is at:
+
+```
+build_qemu/tmp/deploy/images/qemuarm64/adu-base-image-qemuarm64.rootfs.wic
+```
+
+The WIC image contains the full A/B partition layout:
+
+| Partition | Mount Point | Size | Purpose |
+|---|---|---|---|
+| 1 (boot) | `/boot` | 64 MB | Kernel, device tree, boot script |
+| 2 (rootA) | `/` | ~1.5 GB | Active root filesystem |
+| 3 (rootB) | *(inactive)* | ~1.5 GB | Standby root for A/B updates |
+| 4 (data) | `/adu` | ~256 MB | Persistent ADU state and downloads |
+
+### Running the QEMU Image
+
+Use the provided launch script which sets up pflash units, virtio storage,
+and networking:
+
+```bash
+./sources/meta-qemu-adu/scripts/run-adu-qemu.sh
+```
+
+The script handles:
+- Creating pflash firmware images (U-Boot + environment)
+- Attaching the WIC image as a virtio block device
+- Configuring TAP or user-mode networking
+- Setting memory, CPU, and serial console
+
+### Configuring the ADU Agent
+
+On first boot, configure the agent with your IoT Hub connection:
+
+```bash
+# On the QEMU guest
+sudo /usr/bin/AducIotAgent --connection-string "HostName=..."
+```
+
+Or pre-provision via `/etc/adu/du-config.json` in the image by adding a
+recipe that installs your configuration file.
+
+### Key Differences from Physical Hardware
+
+| Aspect | Physical Board | QEMU |
+|---|---|---|
+| Storage device | `/dev/mmcblk0` | `/dev/vda` |
+| U-Boot env storage | MMC/eMMC | pflash (MTD via CFI) |
+| Boot commands | `fatload mmc 0:1` | `load virtio 0:1` |
+| Device tree | Loaded from boot partition | Provided by QEMU (`fdtcontroladdr`) |
+| Networking | Ethernet/WiFi | virtio-net (user-mode or TAP) |
+| Environment tool | `fw_printenv` → MMC | `fw_printenv` → `/dev/mtd0` |
+
+### Validating A/B Boot and Rollback
+
+Run the automated test suite to verify the full boot lifecycle:
+
+```bash
+./sources/meta-qemu-adu/scripts/test-qemu-ab-boot.sh
+```
+
+This validates:
+- U-Boot environment initialization and persistence
+- `fw_printenv` / `fw_setenv` from Linux userspace
+- Partition switching (rootA → rootB and back)
+- Automatic rollback after maximum boot retry count exceeded
+- Catastrophic failure detection with rescue latch
+
+### Troubleshooting QEMU Builds
+
+**`do_rootfs` fails with intercept hook errors:**
+
+The QEMU image uses custom no-op postinstall intercept scripts because the
+desktop-oriented database updates (font cache, mime DB, mandb) are not needed
+for embedded IoT images and fail during cross-architecture rootfs assembly.
+This is handled automatically by `POSTINST_INTERCEPTS_DIR` in the image recipe.
+
+**`fw_printenv` fails inside the guest:**
+
+Ensure QEMU was launched with two pflash units (not `-bios`). The kernel must
+have CFI/physmap MTD drivers enabled (`CONFIG_MTD`, `CONFIG_MTD_CFI`,
+`CONFIG_MTD_PHYSMAP`). Verify with `cat /proc/mtd`.
+
+**Build takes very long on WSL:**
+
+Recipe parsing is slow when source layers are on `/mnt/c/` (NTFS via 9P).
+For faster builds, clone repos directly into the WSL ext4 filesystem
+(`/home/yocto/sources/`) instead of using symlinks to Windows paths.
+
 ## Board-Specific Notes
 
 ### Raspberry Pi 4
