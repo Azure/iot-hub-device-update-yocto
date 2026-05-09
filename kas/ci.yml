@@ -23,11 +23,9 @@ repos:
   meta-swupdate:
     url: "https://github.com/sbabic/meta-swupdate.git"
 
-  meta-raspberrypi:
-    url: "https://git.yoctoproject.org/meta-raspberrypi"
-
-  meta-freescale:
-    url: "https://github.com/Freescale/meta-freescale.git"
+  # Board-specific BSP layers (meta-raspberrypi, meta-freescale) are
+  # defined in each machine-*.yml file, not here. This avoids dynamic-layer
+  # recipes from activating on the wrong machine.
 
   meta-azure-device-update:
     url: "https://github.com/Azure/meta-azure-device-update.git"

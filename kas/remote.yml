@@ -32,11 +32,8 @@ repos:
     url: "https://github.com/Azure/meta-azure-device-update.git"
     branch: user/msft/nox-msft/new-yocto-poc
 
-  meta-raspberrypi:
-    url: "https://git.yoctoproject.org/meta-raspberrypi"
-
-  meta-freescale:
-    url: "https://github.com/Freescale/meta-freescale.git"
+  # Board-specific BSP layers (meta-raspberrypi, meta-freescale) are
+  # defined in each machine-*.yml file, not here.
 
   meta-azure-device-update-bsp:
     url: "https://github.com/Azure/meta-azure-device-update-bsp.git"

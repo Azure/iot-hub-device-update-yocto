@@ -13,6 +13,7 @@ target:
 repos:
   meta-freescale:
     path: ../meta-freescale
+    url: "https://github.com/Freescale/meta-freescale.git"
 
   meta-azure-device-update-bsp:
     path: ../meta-azure-device-update-bsp

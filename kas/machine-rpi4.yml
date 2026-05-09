@@ -13,6 +13,7 @@ target:
 repos:
   meta-raspberrypi:
     path: ../meta-raspberrypi
+    url: "https://git.yoctoproject.org/meta-raspberrypi"
 
   meta-azure-device-update-bsp:
     path: ../meta-azure-device-update-bsp
