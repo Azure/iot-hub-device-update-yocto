@@ -58,9 +58,9 @@ local_conf_header:
     # Mask delta-only recipes that require .NET DiffGenTool
     BBMASK:append = " meta-azure-device-update-samples/recipes-samples/delta-generation"
     BBMASK:append = " meta-azure-device-update-samples/recipes-samples/adu-delta-test-package"
-    # SWUpdate signing keys (generated test keys for dev builds)
-    ADUC_PRIVATE_KEY = "${TOPDIR}/conf/swupdate-signing/priv.pem"
-    ADUC_PRIVATE_KEY_PASSWORD = "${TOPDIR}/conf/swupdate-signing/priv.pass"
+    # SWUpdate signing keys — placed outside conf/ to avoid kas overwriting them
+    ADUC_PRIVATE_KEY = "${TOPDIR}/swupdate-signing/priv.pem"
+    ADUC_PRIVATE_KEY_PASSWORD = "${TOPDIR}/swupdate-signing/priv.pass"
   adu-source: |
     # Use local clone of ADU agent source (avoids fetching from GitHub)
     ADU_SRC_URI = "git:///home/yocto/sources/iot-hub-device-update"
