@@ -59,8 +59,9 @@ local_conf_header:
     BBMASK:append = " meta-azure-device-update-samples/recipes-samples/delta-generation"
     BBMASK:append = " meta-azure-device-update-samples/recipes-samples/adu-delta-test-package"
     # SWUpdate signing keys — placed outside conf/ to avoid kas overwriting them
-    ADUC_PRIVATE_KEY = "${TOPDIR}/swupdate-signing/priv.pem"
-    ADUC_PRIVATE_KEY_PASSWORD = "${TOPDIR}/swupdate-signing/priv.pass"
+    # Use ?= so CI overlays (ci-signing-keys) can override with pipeline paths
+    ADUC_PRIVATE_KEY ?= "${TOPDIR}/swupdate-signing/priv.pem"
+    ADUC_PRIVATE_KEY_PASSWORD ?= "${TOPDIR}/swupdate-signing/priv.pass"
   adu-source: |
     # Use local clone of ADU agent source (avoids fetching from GitHub)
     ADU_SRC_URI = "git:///home/yocto/sources/iot-hub-device-update"
