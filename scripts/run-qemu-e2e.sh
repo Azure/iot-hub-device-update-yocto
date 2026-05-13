@@ -247,9 +247,70 @@ cp "$WIC_ORIG" "$WIC"
 reset_pflash
 
 # --------------------------------------------------------------------------
+# JUnit XML test result emitter
+# --------------------------------------------------------------------------
+# Records per-stage outcomes so the pipeline can publish a TestRun (which
+# Azure DevOps subsequently exports to Kusto via the standard test result
+# ingestion). The XML is written by the EXIT trap so it captures both
+# successful runs and mid-stage failures (set -e + non-zero exit).
+declare -a JUNIT_RESULTS=()   # entries: "name|status|duration_seconds|message"
+declare -i JUNIT_STAGE_START=0
+JUNIT_CURRENT_STAGE=""
+
+junit_start() {
+    JUNIT_CURRENT_STAGE="$1"
+    JUNIT_STAGE_START=$SECONDS
+}
+
+junit_pass() {
+    local s="${1:-$JUNIT_CURRENT_STAGE}"
+    local dur=$(( SECONDS - JUNIT_STAGE_START ))
+    JUNIT_RESULTS+=("${s}|pass|${dur}|")
+    JUNIT_CURRENT_STAGE=""
+}
+
+emit_junit() {
+    local rc=$?
+    if [[ -n "$JUNIT_CURRENT_STAGE" ]]; then
+        local dur=$(( SECONDS - JUNIT_STAGE_START ))
+        local msg="Stage '${JUNIT_CURRENT_STAGE}' aborted with exit code ${rc}. See ${OUT_DIR} for per-stage logs."
+        JUNIT_RESULTS+=("${JUNIT_CURRENT_STAGE}|fail|${dur}|${msg}")
+    fi
+    local out="$OUT_DIR/qemu-e2e-junit.xml"
+    local total=${#JUNIT_RESULTS[@]}
+    local fails=0
+    local entry
+    for entry in "${JUNIT_RESULTS[@]}"; do
+        case "$entry" in *\|fail\|*) fails=$((fails+1));; esac
+    done
+    local xml_escape='s/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g'
+    {
+        echo '<?xml version="1.0" encoding="UTF-8"?>'
+        echo "<testsuites name=\"qemu-e2e\" tests=\"${total}\" failures=\"${fails}\" time=\"${SECONDS}\">"
+        echo "  <testsuite name=\"qemu-e2e.swupdate\" tests=\"${total}\" failures=\"${fails}\" time=\"${SECONDS}\">"
+        for entry in "${JUNIT_RESULTS[@]}"; do
+            IFS='|' read -r name status dur msg <<<"$entry"
+            local ename emsg
+            ename=$(printf '%s' "$name" | sed "$xml_escape")
+            emsg=$(printf '%s' "$msg" | sed "$xml_escape")
+            echo "    <testcase classname=\"qemu-e2e.swupdate\" name=\"${ename}\" time=\"${dur}\">"
+            if [[ "$status" == "fail" ]]; then
+                echo "      <failure message=\"${emsg}\" type=\"AssertionError\">${emsg}</failure>"
+            fi
+            echo "    </testcase>"
+        done
+        echo "  </testsuite>"
+        echo "</testsuites>"
+    } > "$out"
+    echo "[junit] wrote $out (${total} tests, ${fails} failures)"
+}
+trap emit_junit EXIT
+
+# --------------------------------------------------------------------------
 # Stage 0 — sanity boot
 # --------------------------------------------------------------------------
 STAGE="stage0-sanity"
+junit_start "$STAGE"
 echo ""
 echo "=== $STAGE: first boot of base image ==="
 boot_guest "$STAGE" || exit 10
@@ -270,11 +331,13 @@ if [[ "$BASE_VER" == "MISSING" ]]; then
     exit 12
 fi
 echo "[$STAGE] PASS"
+junit_pass "$STAGE"
 
 # --------------------------------------------------------------------------
 # Stage 1 — full install v1
 # --------------------------------------------------------------------------
 STAGE="stage1-full-v1"
+junit_start "$STAGE"
 echo ""
 echo "=== $STAGE: install adu-update-image-v1 to inactive slot ==="
 
@@ -317,11 +380,13 @@ fi
 echo "[$STAGE] running adu-e2e-confirm-boot..."
 ssh_run "adu-e2e-confirm-boot" | tee "$OUT_DIR/${STAGE}-confirm.log"
 echo "[$STAGE] PASS"
+junit_pass "$STAGE"
 
 # --------------------------------------------------------------------------
 # Stage 2 — delta install v1 -> v2
 # --------------------------------------------------------------------------
 STAGE="stage2-delta-v1-v2"
+junit_start "$STAGE"
 echo ""
 echo "=== $STAGE: reconstruct + install v2 from cached source + delta ==="
 
@@ -415,6 +480,7 @@ echo "[$STAGE] PASS"
 # show up in Stage 2.
 # --------------------------------------------------------------------------
 STAGE="stage3-handler-delta-v2-v3"
+junit_start "$STAGE"
 echo ""
 echo "=== $STAGE: dlopen handler.so to reconstruct v3, then install ==="
 
@@ -489,6 +555,7 @@ fi
 echo "[$STAGE] running adu-e2e-confirm-boot..."
 ssh_run "adu-e2e-confirm-boot" | tee "$OUT_DIR/${STAGE}-confirm.log"
 
+junit_pass "$STAGE"
 shutdown_guest "$STAGE"
 
 echo ""
