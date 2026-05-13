@@ -31,11 +31,29 @@ LOG="$OUT_DIR/verify-image-contents.log"
 TS_START="$(date +%s)"
 
 # Locate the rootfs artifact. Newest-mtime wins so re-runs pick up rebuilds.
-ROOTFS_GZ="$(ls -t "$DEPLOY"/adu-base-image-"$MACHINE".rootfs-*.ext4.gz 2>/dev/null | head -n 1 || true)"
-ROOTFS_PLAIN="$(ls -t "$DEPLOY"/adu-base-image-"$MACHINE".rootfs-*.ext4 2>/dev/null | head -n 1 || true)"
+#
+# Image filename layout depends on IMAGE_NAME_SUFFIX, which differs per board:
+#   default (QEMU, i.MX8ULP): adu-base-image-<machine>.rootfs-<datestamp>.ext4[.gz]
+#   RPi4 (exports IMAGE_NAME_SUFFIX=""): adu-base-image-<machine>-<datestamp>.ext4[.gz]
+# Use a broad glob that tolerates both forms.
+shopt -s nullglob
+candidates_gz=( "$DEPLOY"/adu-base-image-"$MACHINE"*.ext4.gz )
+candidates_plain=( "$DEPLOY"/adu-base-image-"$MACHINE"*.ext4 )
+shopt -u nullglob
+
+ROOTFS_GZ=""
+ROOTFS_PLAIN=""
+if (( ${#candidates_gz[@]} > 0 )); then
+    ROOTFS_GZ="$(ls -t "${candidates_gz[@]}" | head -n 1)"
+fi
+if (( ${#candidates_plain[@]} > 0 )); then
+    ROOTFS_PLAIN="$(ls -t "${candidates_plain[@]}" | head -n 1)"
+fi
 
 if [[ -z "$ROOTFS_GZ" && -z "$ROOTFS_PLAIN" ]]; then
     echo "ERROR: no rootfs ext4(.gz) found under $DEPLOY for MACHINE=$MACHINE" >&2
+    echo "Directory listing for debugging:" >&2
+    ls -la "$DEPLOY" 2>&1 | head -n 100 >&2 || true
     exit 3
 fi
 
