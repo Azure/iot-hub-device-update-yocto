@@ -82,8 +82,8 @@ REQUIRED=(
     "adu-persistent-overlay.service|/lib/systemd/system/adu-persistent-overlay.service"
     "board.conf|/etc/adu/board.conf"
     "adu-swupdate-hw-compat|/etc/adu-swupdate-hw-compat"
-    "yocto-a-b-update|/usr/sbin/yocto-a-b-update"
-    "adu-confirm-boot|/usr/sbin/adu-confirm-boot"
+    "yocto-a-b-update|/usr/lib/adu/yocto-a-b-update.sh"
+    "adu-confirm-boot|/usr/bin/adu-confirm-boot"
     "fw_printenv|/usr/bin/fw_printenv"
     "swupdate|/usr/bin/swupdate"
 )
