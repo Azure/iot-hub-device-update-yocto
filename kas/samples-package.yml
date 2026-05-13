@@ -1,0 +1,39 @@
+header:
+  version: 14
+
+# Optional overlay that enables the adu-delta-test-package recipe and adds
+# it to the target list. Produces:
+#
+#   tmp/deploy/images/<MACHINE>/adu-delta-test-package.tar.gz
+#
+# which contains a self-contained tree (images/, update-1.0.0/,
+# update-2.0.0/, update-3.0.0/, scripts/, docs/, README.md). Each
+# update-x.y.z/ ships the .importmanifest.json plus the matching payload
+# (SWU and/or delta .diff) — the exact bundle the ADU service importer
+# consumes.
+#
+# Also produces top-level *.importmanifest.json next to the SWUs, since
+# adu-delta-test-package.bb invokes generate_import_manifest.py for v1/v2/v3.
+#
+# Requires kas/delta.yml so the delta-generation tooling is on BBLAYERS
+# (the test package depends on adu-delta-image:do_deploy).
+#
+# Use:
+#   kas build kas/base.yml:kas/machine-rpi4.yml:kas/delta.yml:kas/samples-package.yml
+
+target:
+  - adu-delta-test-package
+
+local_conf_header:
+  # base.yml's "samples" block BBMASKs adu-delta-test-package + delta-generation
+  # and forces WITH_FEATURE_DELTA_UPDATE=0. Use a key that sorts AFTER
+  # "samples" so our override wins (kas emits blocks in alphabetical order).
+  z-samples-package-overrides: |
+    WITH_FEATURE_DELTA_UPDATE = "1"
+    BBMASK:remove = " meta-azure-device-update-samples/recipes-samples/delta-generation"
+    BBMASK:remove = " meta-azure-device-update-samples/recipes-samples/adu-delta-test-package"
+
+    # libconfig K&R-vs-C23 fix (same as kas/qemu-e2e.yml).
+    CFLAGS:append:pn-libconfig-native = " -std=gnu17"
+    CFLAGS:append:pn-libconfig = " -std=gnu17"
+    BUILD_CFLAGS:append:pn-libconfig-native = " -std=gnu17"
