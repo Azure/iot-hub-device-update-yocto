@@ -296,6 +296,43 @@ This validates:
 - Automatic rollback after maximum boot retry count exceeded
 - Catastrophic failure detection with rescue latch
 
+### End-to-End SWUpdate Validation (full + delta, no ADU service)
+
+The `kas/qemu-e2e.yml` overlay plus `scripts/run-qemu-e2e.sh` exercise the
+complete SWUpdate install + delta-reconstruction path **entirely inside the
+QEMU guest** with no ADU agent, IoT Hub, or external network. Three stages:
+
+1. **Sanity boot** — verify the freshly flashed `adu-base-image` reports the
+   baseline `/etc/adu-version` (`ADU_SOFTWARE_VERSION`, default `0.0.1.0`) and
+   that root is `/dev/vda2`.
+2. **Full install of v1** — push `adu-update-image-v1-qemuarm64.swu` + the
+   matching `*-recompressed.swu` into the guest, run `adu-e2e-install-full`,
+   reboot, verify `/etc/adu-version == 1.0.0.1` on `/dev/vda3`.
+3. **Delta install v1→v2** — push `adu-delta-v1_v2.diff`, reconstruct the v2
+   SWU inside the guest with `applydiff <cached-recompressed> <diff>`, install,
+   reboot, verify `/etc/adu-version == 1.0.0.2` on `/dev/vda2`.
+
+Communication uses the SSH port forward (host `2222` → guest `22`). The driver
+generates a throwaway ed25519 keypair and injects the pubkey via the serial
+console after every boot (the rootfs from each SWU starts clean).
+
+Build the image and the delta artifacts together, then run the validator:
+
+```bash
+KAS_BUILD_DIR=build_qemu kas build \
+  kas/base.yml:kas/machine-qemu.yml:kas/delta.yml:kas/qemu-e2e.yml
+
+./scripts/run-qemu-e2e.sh build_qemu/tmp/deploy/images/qemuarm64/
+```
+
+The script exits 0 only if all three stages pass. Per-stage logs and the QEMU
+serial log are written under `${TMPDIR:-/tmp}/qemu-e2e-<pid>/`.
+
+Requirements on the host: `qemu-system-aarch64`, `ssh`, `scp`, `ssh-keygen`.
+The `applydiff` binary and SWUpdate run **inside the guest** so no .NET SDK or
+delta toolchain is needed on the host beyond what `kas/delta.yml` already
+requires for diff generation at build time.
+
 ### Troubleshooting QEMU Builds
 
 **`do_rootfs` fails with intercept hook errors:**

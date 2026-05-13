@@ -1,0 +1,56 @@
+header:
+  version: 14
+
+# Optional overlay enabling the in-emulator e2e SWUpdate validation flow.
+# Use:
+#   kas build kas/base.yml:kas/machine-qemu.yml:kas/delta.yml:kas/qemu-e2e.yml
+#   ./scripts/run-qemu-e2e.sh build/tmp/deploy/images/qemuarm64/
+#
+# Adds:
+#   - The adu-qemu-e2e helper recipe (in-guest scripts) to adu-base-image.
+#   - The applydiff/libadudiffapi tools so the guest can reconstruct the
+#     target SWU from source-recompressed + .diff entirely offline.
+#   - adu-delta-image to the target list so the recompressed source SWUs and
+#     v1_v2 / v2_v3 diff files are produced during the build.
+#
+# Note: this overlay requires kas/delta.yml to also be included so the
+# meta-iot-hub-device-update-delta layer is on BBLAYERS.
+
+target:
+  - adu-delta-image
+
+local_conf_header:
+  qemu-e2e: |
+    # Helper scripts run inside the QEMU guest by run-qemu-e2e.sh
+    IMAGE_INSTALL:append:pn-adu-base-image = " adu-qemu-e2e"
+
+    # Delta reconstruction tool (applydiff) + runtime library used by
+    # adu-e2e-reconstruct-and-install-delta to produce the target SWU from
+    # a cached source + delta diff without round-tripping through ADU.
+    IMAGE_INSTALL:append:pn-adu-base-image = " iot-hub-device-update-delta-processor"
+
+    # Stage 3: small dlopen test driver that exercises the actual
+    # microsoft/delta:1 download handler .so (libmicrosoft_delta_download_handler.so)
+    # — proves the on-device handler binary works, not just the underlying CLI.
+    IMAGE_INSTALL:append:pn-adu-base-image = " adu-delta-handler-test"
+
+    # Note: azure-device-update (which provides libmicrosoft_delta_download_handler.so
+    # under /var/lib/adu/extensions/sources/) is now installed by default via
+    # meta-azure-device-update-bsp/recipes-core/images/adu-base-image-qemuarm64.inc.
+  # IMPORTANT: kas emits local_conf_header blocks in alphabetical key order, so
+  # base.yml's "samples" block runs AFTER our "qemu-e2e" block and re-asserts
+  # WITH_FEATURE_DELTA_UPDATE=0 + BBMASK on delta-generation. We need a key
+  # that sorts AFTER "samples" to overturn it. "z-qemu-e2e-overrides" wins.
+  z-qemu-e2e-overrides: |
+    # Re-enable delta and unmask delta-generation for this overlay (base.yml's
+    # "samples" block disables both by default — assumes no .NET SDK on host).
+    WITH_FEATURE_DELTA_UPDATE = "1"
+    BBMASK:remove = " meta-azure-device-update-samples/recipes-samples/delta-generation"
+
+    # GCC 15 / C23 default treats `int foo()` as zero-args (was K&R "any args"
+    # pre-C23). libconfig 1.7.3 — pulled in transitively by the delta tooling
+    # — has K&R declarations in grammar.y/scanner.l and fails to build. Force
+    # GNU17 dialect for that recipe only (target + native).
+    CFLAGS:append:pn-libconfig-native = " -std=gnu17"
+    CFLAGS:append:pn-libconfig = " -std=gnu17"
+    BUILD_CFLAGS:append:pn-libconfig-native = " -std=gnu17"
