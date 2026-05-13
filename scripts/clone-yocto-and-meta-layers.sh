@@ -223,10 +223,10 @@ fi
 
 
 # Clone Poke and all base layers
-uri_poky='git://git.yoctoproject.org/poky'
+uri_poky='https://git.yoctoproject.org/poky'
 uri_meta_swu='https://github.com/sbabic/meta-swupdate'
-uri_meta_oe='git://git.openembedded.org/meta-openembedded'
-uri_meta_rpi='git://git.yoctoproject.org/meta-raspberrypi'
+uri_meta_oe='https://git.openembedded.org/meta-openembedded'
+uri_meta_rpi='https://git.yoctoproject.org/meta-raspberrypi'
 
 # Clone poky
 layer_base="$proj_root/yocto"
