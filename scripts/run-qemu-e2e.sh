@@ -184,15 +184,20 @@ boot_guest() {
     fi
     echo "[$stage] SSH key injected via serial"
 
+    # SSH wait budget: defaults to 600s to accommodate slow CI agents where
+    # the Ubuntu update-motd.d hooks (landscape-sysinfo, motd-news, release-upgrade)
+    # can block the serial console for several minutes before sshd.socket activates.
+    # Override with E2E_SSH_WAIT_SECS for faster local runs.
+    local ssh_wait_budget="${E2E_SSH_WAIT_SECS:-600}"
     waited=0
-    while (( waited < 120 )); do
+    while (( waited < ssh_wait_budget )); do
         if ssh_run "true" >/dev/null 2>&1; then
             echo "[$stage] SSH up after ${waited}s post-inject"
             return 0
         fi
         sleep 3; waited=$(( waited + 3 ))
     done
-    echo "[$stage] FAIL: guest SSH not reachable after key inject" >&2
+    echo "[$stage] FAIL: guest SSH not reachable after key inject (waited ${ssh_wait_budget}s)" >&2
     tail -60 "$SERIAL_LOG" >&2 || true
     return 1
 }
