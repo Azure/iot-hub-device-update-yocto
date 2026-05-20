@@ -164,20 +164,79 @@ boot_guest() {
     fi
 
     # Inject pubkey via serial.
-    {
-        sleep 1; printf 'root\n'
-        sleep 2; printf 'mkdir -p /root/.ssh && chmod 700 /root/.ssh\n'
-        sleep 1; printf 'printf "%%s\\n" "%s" > /root/.ssh/authorized_keys\n' "$SSH_PUB"
-        sleep 1; printf 'chmod 600 /root/.ssh/authorized_keys\n'
-        sleep 1; printf 'sync\n'
-        sleep 1; printf 'echo E2E_KEY_INJECTED\n'
-    } >&9
+    #
+    # Synchronization rules (each step waits for evidence in $SERIAL_LOG before
+    # sending the next, to avoid characters being interleaved with motd output
+    # or with the tty cursor-position report that the kernel emits during boot):
+    #
+    #   1. Send "root\n", wait for shell prompt (qemuarm64:~#)
+    #   2. Send a "PROMPT_READY" marker echo, wait for it (drains motd)
+    #   3. Set PS1='READY> ' and stty -echo to silence motd + line echo
+    #   4. Send key-injection commands one at a time, separated by waits for
+    #      the next READY> prompt
+    #
+    # This replaces the previous fixed-sleep approach which lost characters
+    # whenever motd printed during command injection.
+    wait_for_re() {
+        local pattern="$1" budget="${2:-60}" t=0
+        while (( t < budget )); do
+            if grep -aqE "$pattern" "$SERIAL_LOG" 2>/dev/null; then return 0; fi
+            sleep 1; t=$(( t + 1 ))
+        done
+        return 1
+    }
+
+    # 1. Login.
+    printf 'root\n' >&9
+    if ! wait_for_re 'qemuarm64:~#' 60; then
+        echo "[$stage] FAIL: shell prompt not seen after login" >&2
+        tail -40 "$SERIAL_LOG" >&2 || true
+        return 1
+    fi
+    # 2. Drain motd by echoing a marker and waiting for it to come back.
+    local drain_marker="__E2E_SERIAL_READY_$$__"
+    printf 'echo %s\n' "$drain_marker" >&9
+    if ! wait_for_re "$drain_marker" 30; then
+        echo "[$stage] FAIL: serial drain marker not seen" >&2
+        tail -40 "$SERIAL_LOG" >&2 || true
+        return 1
+    fi
+    # 3. Set a deterministic prompt and disable local echo. After this point,
+    # we wait for each "READY>" between commands so input/output can't race.
+    printf "PS1='READY> '\n" >&9
+    printf 'stty -echo 2>/dev/null; clear 2>/dev/null; echo PROMPT_SET\n' >&9
+    if ! wait_for_re 'PROMPT_SET' 15; then
+        echo "[$stage] FAIL: prompt setup not confirmed" >&2
+        tail -40 "$SERIAL_LOG" >&2 || true
+        return 1
+    fi
+    # 4. Send injection commands one-by-one, gated on READY> reappearing.
+    local prev_lines
+    inject_step() {
+        prev_lines=$(wc -l < "$SERIAL_LOG")
+        printf '%s\n' "$1" >&9
+        local t=0
+        while (( t < 30 )); do
+            # Need a NEW READY> after $prev_lines, not the stale one.
+            if tail -n +$(( prev_lines + 1 )) "$SERIAL_LOG" 2>/dev/null | grep -aq 'READY>'; then
+                return 0
+            fi
+            sleep 1; t=$(( t + 1 ))
+        done
+        return 1
+    }
+    inject_step "mkdir -p /root/.ssh && chmod 700 /root/.ssh" || { echo "[$stage] FAIL: mkdir" >&2; return 1; }
+    inject_step "printf '%s\\n' '$SSH_PUB' > /root/.ssh/authorized_keys" || { echo "[$stage] FAIL: authorized_keys write" >&2; return 1; }
+    inject_step "chmod 600 /root/.ssh/authorized_keys" || { echo "[$stage] FAIL: chmod" >&2; return 1; }
+    inject_step "sync" || { echo "[$stage] FAIL: sync" >&2; return 1; }
+    # Final marker (search anywhere in log, not just after last READY).
+    printf 'echo E2E_KEY_INJECTED\n' >&9
     local k=0
     while (( k < 30 )); do
-        grep -q "E2E_KEY_INJECTED" "$SERIAL_LOG" 2>/dev/null && break
+        grep -aq "E2E_KEY_INJECTED" "$SERIAL_LOG" 2>/dev/null && break
         sleep 1; k=$(( k + 1 ))
     done
-    if ! grep -q "E2E_KEY_INJECTED" "$SERIAL_LOG"; then
+    if ! grep -aq "E2E_KEY_INJECTED" "$SERIAL_LOG"; then
         echo "[$stage] FAIL: key-injection marker not seen" >&2
         tail -40 "$SERIAL_LOG" >&2 || true
         return 1
