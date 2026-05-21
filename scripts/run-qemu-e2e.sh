@@ -228,6 +228,18 @@ boot_guest() {
     inject_step "mkdir -p /root/.ssh && chmod 700 /root/.ssh" || { echo "[$stage] FAIL: mkdir" >&2; return 1; }
     inject_step "printf '%s\\n' '$SSH_PUB' > /root/.ssh/authorized_keys" || { echo "[$stage] FAIL: authorized_keys write" >&2; return 1; }
     inject_step "chmod 600 /root/.ssh/authorized_keys" || { echo "[$stage] FAIL: chmod" >&2; return 1; }
+    # Disable the ADU agent health watchdog timer for the duration of this
+    # boot. In production it reboots the device after 3 failed restart
+    # attempts of deviceupdate-agent.service; in the QEMU e2e image the agent
+    # has no connection string and never starts cleanly, so the watchdog
+    # otherwise triggers an unsolicited reboot ~17 minutes after each boot —
+    # which races with applydiff during Stage 2 and Stage 3 and kills SSH.
+    # Use `stop` only (NOT `mask`/`disable`): mask triggers daemon-reload,
+    # which has been observed to re-run systemd-fstab-generator and can
+    # disturb the sshd socket activation that the harness depends on.
+    # Stopping is sufficient because the timer won't fire again until next
+    # reboot, and boot_guest re-runs inject_step on every post-reboot boot.
+    inject_step "systemctl stop adu-agent-watchdog.timer adu-agent-watchdog.service 2>/dev/null; true" || { echo "[$stage] FAIL: stop agent watchdog" >&2; return 1; }
     inject_step "sync" || { echo "[$stage] FAIL: sync" >&2; return 1; }
     # Final marker (search anywhere in log, not just after last READY).
     printf 'echo E2E_KEY_INJECTED\n' >&9
@@ -398,6 +410,88 @@ echo "[$STAGE] PASS"
 junit_pass "$STAGE"
 
 # --------------------------------------------------------------------------
+# Stage 0.5 — yocto-a-b-update.sh fail-fast smoke test
+# --------------------------------------------------------------------------
+# Phase B added validate_board_conf() to yocto-a-b-update.sh. This stage
+# proves the new guard fires correctly when /etc/adu/board.conf is missing
+# or incomplete, AND that the script does NOT mutate the U-Boot env in that
+# state (i.e. a misconfigured device cannot accidentally A/B-flip itself).
+#
+# Implementation: blank board.conf, invoke the script the way the SWUpdate
+# v2 step handler would (--action-install + --result-file), assert non-zero
+# exit, assert error message in result file, assert boot_partition env
+# unchanged, then restore board.conf.
+STAGE="stage0.5-handler-failfast"
+junit_start "$STAGE"
+echo ""
+echo "=== $STAGE: yocto-a-b-update.sh fails fast on missing board.conf ==="
+
+PRE_BOOT_PART="$(ssh_run 'fw_printenv -n boot_partition 2>/dev/null || echo MISSING')"
+echo "[$STAGE] pre-test boot_partition = $PRE_BOOT_PART"
+
+# Run the test on the guest. We inline a small bash block via ssh_run so the
+# whole sequence (backup -> blank -> invoke -> capture -> restore) is atomic
+# even if intermediate steps fail.
+SMOKE_OUT="$(ssh_run '
+set +e
+mkdir -p /tmp/abu-smoke
+RESULT=/tmp/abu-smoke/result.json
+LOG=/tmp/abu-smoke/run.log
+WF=/tmp/abu-smoke/wf
+mkdir -p "$WF"
+: > "$RESULT"; : > "$LOG"
+
+# Backup and blank board.conf.
+cp /etc/adu/board.conf /tmp/abu-smoke/board.conf.bak
+: > /etc/adu/board.conf
+
+# Invoke the handler script with an empty fake .swu. We expect non-zero
+# exit and a structured error in $RESULT.
+touch /tmp/abu-smoke/dummy.swu
+/usr/lib/adu/yocto-a-b-update.sh \
+    --action-install \
+    --swu-file /tmp/abu-smoke/dummy.swu \
+    --installed-criteria 1.0.0.99 \
+    --work-folder "$WF" \
+    --result-file "$RESULT" \
+    --output-file "$WF/out" \
+    --log-file "$LOG" >/tmp/abu-smoke/stdout 2>/tmp/abu-smoke/stderr
+RC=$?
+
+# Restore board.conf BEFORE we exit so the rest of the e2e run is unaffected.
+cp /tmp/abu-smoke/board.conf.bak /etc/adu/board.conf
+
+echo "RC=${RC}"
+echo "RESULT_CONTENT_BEGIN"
+cat "$RESULT" 2>/dev/null
+echo "RESULT_CONTENT_END"
+')"
+
+POST_BOOT_PART="$(ssh_run 'fw_printenv -n boot_partition 2>/dev/null || echo MISSING')"
+echo "[$STAGE] post-test boot_partition = $POST_BOOT_PART"
+echo "$SMOKE_OUT" > "$OUT_DIR/${STAGE}.log"
+
+SMOKE_RC="$(echo "$SMOKE_OUT" | sed -n 's/^RC=//p' | head -1)"
+if [[ -z "$SMOKE_RC" ]]; then
+    echo "[$STAGE] FAIL: could not parse RC from smoke output" >&2
+    exit 31
+fi
+if [[ "$SMOKE_RC" == "0" ]]; then
+    echo "[$STAGE] FAIL: yocto-a-b-update.sh returned 0 with empty board.conf — guard did not fire" >&2
+    exit 32
+fi
+if ! echo "$SMOKE_OUT" | grep -q -E 'BOARD_CONF|board\.conf'; then
+    echo "[$STAGE] FAIL: result file did not mention board.conf (guard fired but for wrong reason?)" >&2
+    exit 33
+fi
+if [[ "$PRE_BOOT_PART" != "$POST_BOOT_PART" ]]; then
+    echo "[$STAGE] FAIL: boot_partition mutated despite fail-fast ($PRE_BOOT_PART -> $POST_BOOT_PART)" >&2
+    exit 34
+fi
+echo "[$STAGE] PASS (rc=$SMOKE_RC, boot_partition unchanged at $POST_BOOT_PART)"
+junit_pass "$STAGE"
+
+# --------------------------------------------------------------------------
 # Stage 1 — full install v1
 # --------------------------------------------------------------------------
 STAGE="stage1-full-v1"
@@ -526,6 +620,7 @@ fi
 echo "[$STAGE] running adu-e2e-confirm-boot..."
 ssh_run "adu-e2e-confirm-boot" | tee "$OUT_DIR/${STAGE}-confirm.log"
 echo "[$STAGE] PASS"
+junit_pass "$STAGE"
 
 # --------------------------------------------------------------------------
 # Stage 3 — handler-driven delta install v2 -> v3
@@ -548,6 +643,27 @@ junit_start "$STAGE"
 echo ""
 echo "=== $STAGE: dlopen handler.so to reconstruct v3, then install ==="
 
+# Stage 3 reuses the running v2 guest (no shutdown_guest between Stage 2's
+# confirm-boot and here). On slower CI agents the SSH session that worked
+# during Stage 2 can race with motd-driven sshd churn; probe SSH-readiness
+# explicitly with a short retry budget so set -e doesn't kill the run on
+# the first transient ConnectTimeout.
+echo "[$STAGE] probing SSH readiness on running v2 guest..."
+ssh_ready=0
+for attempt in 1 2 3 4 5 6 7 8 9 10; do
+    if ssh_run "true" >/dev/null 2>&1; then
+        ssh_ready=1
+        echo "[$STAGE] SSH ready (attempt $attempt)"
+        break
+    fi
+    sleep 3
+done
+if (( ssh_ready != 1 )); then
+    echo "[$STAGE] FAIL: SSH unreachable on running v2 guest after Stage 2" >&2
+    cp "$SERIAL_LOG" "$OUT_DIR/${STAGE}-serial-ssh-probe.log" || true
+    exit 39
+fi
+
 # We need a v2-recompressed source on the guest for the handler to consume.
 # Stage 2 installed a *reconstructed* v2 SWU (which the install-full helper
 # caches under /adu/.delta-source-cache/), but those bytes are NOT identical
@@ -555,10 +671,33 @@ echo "=== $STAGE: dlopen handler.so to reconstruct v3, then install ==="
 # recompressed form, so the handler must operate on the recompressed form.
 # Push it explicitly into the cache here.
 echo "[$STAGE] uploading v2-recompressed source + v2->v3 diff + reference SHA..."
-ssh_run "mkdir -p /adu/.delta-source-cache /adu/staging" >/dev/null
-scp_to_guest "$SWU_V2_RECOMP"     root@localhost:/adu/.delta-source-cache/v2-recompressed.swu
-scp_to_guest "$DELTA_V2_V3"       root@localhost:/adu/staging/v2_v3.diff
-scp_to_guest "$SWU_V3_RECOMP_SHA" root@localhost:/adu/staging/v3-recompressed.swu.sha256
+SCP_LOG="$OUT_DIR/${STAGE}-scp.log"
+: > "$SCP_LOG"
+{
+    echo "=== mkdir on guest ==="
+    ssh_run "mkdir -p /adu/.delta-source-cache /adu/staging"
+} >>"$SCP_LOG" 2>&1 || {
+    echo "[$STAGE] FAIL: ssh mkdir on guest (see $SCP_LOG)" >&2
+    tail -40 "$SCP_LOG" >&2 || true
+    cp "$SERIAL_LOG" "$OUT_DIR/${STAGE}-serial-mkdir.log" || true
+    exit 36
+}
+
+# Each scp is wrapped so that on failure we capture stderr + serial state
+# and exit with a stage-specific code (so we can tell which artifact died).
+do_scp() {
+    local src="$1" dst="$2" code="$3"
+    echo "=== scp $src -> $dst ===" >>"$SCP_LOG"
+    if ! scp_to_guest "$src" "$dst" >>"$SCP_LOG" 2>&1; then
+        echo "[$STAGE] FAIL: scp $src -> $dst (rc=$?, see $SCP_LOG)" >&2
+        tail -40 "$SCP_LOG" >&2 || true
+        cp "$SERIAL_LOG" "$OUT_DIR/${STAGE}-serial-scp.log" || true
+        exit "$code"
+    fi
+}
+do_scp "$SWU_V2_RECOMP"     root@localhost:/adu/.delta-source-cache/v2-recompressed.swu 37
+do_scp "$DELTA_V2_V3"       root@localhost:/adu/staging/v2_v3.diff                      38
+do_scp "$SWU_V3_RECOMP_SHA" root@localhost:/adu/staging/v3-recompressed.swu.sha256       39
 
 # Locate the handler .so on the guest. The agent installs it under
 # ADUC_EXTENSIONS_INSTALL_DIR (/var/lib/adu/extensions/sources). Resolve at
