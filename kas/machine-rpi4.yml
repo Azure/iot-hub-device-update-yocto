@@ -24,3 +24,9 @@ local_conf_header:
     ENABLE_UART = "1"
     RPI_USE_U_BOOT = "1"
     IMAGE_BOOT_FILES += "boot.scr"
+    # meta-raspberrypi (scarthgap) pulls in linux-firmware-rpidistro-bcm43456
+    # via packagegroup-base-extended for the BCM43456 Wi-Fi/BT chip on RPi4.
+    # That firmware ships under the Synaptics SLA which Yocto gates behind
+    # the 'synaptics-killswitch' LICENSE_FLAG. Accept it here so the image
+    # builds; the flag only acknowledges the firmware redistribution terms.
+    LICENSE_FLAGS_ACCEPTED:append = " synaptics-killswitch"
