@@ -147,6 +147,8 @@ boot_guest() {
         -device virtio-blk-pci,drive=hd0 \
         -netdev user,id=net0,hostfwd=tcp::${SSH_PORT}-:22 \
         -device virtio-net-pci,netdev=net0 \
+        -object rng-random,filename=/dev/urandom,id=rng0 \
+        -device virtio-rng-pci,rng=rng0 \
         -rtc base=utc,clock=host \
         < "$QEMU_IN_FIFO" > "$SERIAL_LOG" 2>&1 &
     QEMU_PID=$!
