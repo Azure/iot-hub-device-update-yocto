@@ -271,7 +271,31 @@ boot_guest() {
         sleep 3; waited=$(( waited + 3 ))
     done
     echo "[$stage] FAIL: guest SSH not reachable after key inject (waited ${ssh_wait_budget}s)" >&2
-    tail -60 "$SERIAL_LOG" >&2 || true
+    # Capture diagnostics via serial — we still have a logged-in shell on the
+    # guest. This tells us *why* SSH isn't up (vs flying blind on every CI run).
+    echo "[$stage] --- guest diagnostics via serial ---" >&2
+    local diag_marker="__E2E_DIAG_END_$$__"
+    {
+        printf '\n'
+        printf 'echo === sshd unit status ===\n'
+        printf 'systemctl status sshd.socket sshd.service sshdgenkeys.service --no-pager -l 2>&1 | head -80\n'
+        printf 'echo === host keys ===\n'
+        printf 'ls -la /etc/ssh/ssh_host_* 2>&1\n'
+        printf 'echo === listening sockets ===\n'
+        printf 'ss -tlnp 2>&1 || netstat -tlnp 2>&1\n'
+        printf 'echo === entropy ===\n'
+        printf 'cat /proc/sys/kernel/random/entropy_avail 2>&1; cat /sys/class/misc/hw_random/rng_current 2>&1\n'
+        printf 'echo === dmesg rng ===\n'
+        printf 'dmesg 2>&1 | grep -iE "rng|random|virtio" | head -20\n'
+        printf 'echo %s\n' "$diag_marker"
+    } >&9
+    local dt=0
+    while (( dt < 30 )); do
+        grep -aq "$diag_marker" "$SERIAL_LOG" 2>/dev/null && break
+        sleep 1; dt=$(( dt + 1 ))
+    done
+    echo "[$stage] --- end serial log tail ---" >&2
+    tail -200 "$SERIAL_LOG" >&2 || true
     return 1
 }
 
