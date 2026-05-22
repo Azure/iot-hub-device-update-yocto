@@ -1,10 +1,43 @@
 #!/bin/bash
 # Script to cross-compile status_monitor using Yocto toolchain
+#
+# The status_monitor is a command-line utility that continuously monitors the
+# Azure Device Update (ADU) agent status. It's useful for:
+# - Debugging update issues on the device
+# - Monitoring agent state during OTA deployments
+# - System integration testing
+#
+# Prerequisites:
+# - Successful Yocto build with azure-device-update recipe
+# - The SDK library (libaducsdk.a) must be built
+#
+# Usage:
+#   ./build_status_monitor.sh                          # Uses default build output dir
+#   BUILD_OUTPUT_DIR=~/my_build ./build_status_monitor.sh  # Custom build output dir
 
 set -e
 
-# Yocto build paths
-YOCTO_BUILD_DIR="$HOME/adu_yocto/out/build"
+# Build output directory - set via environment variable or use default
+# This should match the -o option used with build.sh
+BUILD_OUTPUT_DIR="${BUILD_OUTPUT_DIR:-$HOME/adu_yocto/out/build}"
+
+# Yocto build paths - supports both flat and nested build directory structures
+if [ -d "${BUILD_OUTPUT_DIR}/build/tmp" ]; then
+    # Nested structure: <output>/build/tmp (from build.sh with -o option)
+    YOCTO_BUILD_DIR="${BUILD_OUTPUT_DIR}/build"
+elif [ -d "${BUILD_OUTPUT_DIR}/tmp" ]; then
+    # Flat structure: <output>/tmp
+    YOCTO_BUILD_DIR="${BUILD_OUTPUT_DIR}"
+else
+    echo "ERROR: Cannot find Yocto build directory. Expected one of:"
+    echo "  ${BUILD_OUTPUT_DIR}/build/tmp"
+    echo "  ${BUILD_OUTPUT_DIR}/tmp"
+    echo ""
+    echo "Set BUILD_OUTPUT_DIR to match the -o option used with build.sh:"
+    echo "  BUILD_OUTPUT_DIR=~/your_build_dir ./scripts/build_status_monitor.sh"
+    exit 1
+fi
+
 ADU_WORK_DIR="${YOCTO_BUILD_DIR}/tmp/work/cortexa72-poky-linux/azure-device-update/1.1+git"
 SYSROOT="${ADU_WORK_DIR}/recipe-sysroot"
 LIB_BUILD_DIR="${ADU_WORK_DIR}/build/src"

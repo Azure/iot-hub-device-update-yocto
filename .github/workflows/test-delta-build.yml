@@ -1,0 +1,182 @@
+name: Test Delta Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      delta_branch:
+        description: 'Delta branch to build'
+        required: false
+        default: 'v2/scarthgap'
+        type: string
+      delta_commit:
+        description: 'Delta commit hash (optional)'
+        required: false
+        default: ''
+        type: string
+      clean_build:
+        description: 'Clean build before building'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  BUILD_DIR: /tmp/yocto_delta_build
+
+jobs:
+  test-delta-build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      
+      - name: Free up disk space
+        run: |
+          echo "Before cleanup:"
+          df -h
+          
+          # Remove unnecessary software
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo docker image prune --all --force
+          
+          echo "After cleanup:"
+          df -h
+      
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gawk wget git diffstat unzip texinfo gcc build-essential \
+            chrpath socat cpio python3 python3-pip python3-pexpect \
+            xz-utils debianutils iputils-ping python3-git python3-jinja2 \
+            libegl1-mesa libsdl1.2-dev python3-subunit mesa-common-dev \
+            zstd liblz4-tool file locales libacl1 openssl curl
+          
+          sudo locale-gen en_US.UTF-8
+          echo "✅ Dependencies installed"
+      
+      - name: Generate ADU signing keys
+        run: |
+          echo "Generating test ADU signing keys..."
+          mkdir -p keys
+          echo "test-delta-build-password" > keys/priv.pass
+          openssl genrsa -out keys/priv.pem -passout file:keys/priv.pass 2048
+          openssl rsa -in keys/priv.pem -passin file:keys/priv.pass -out keys/public.pem -outform PEM -pubout
+          echo "✅ ADU keys generated"
+          ls -la keys/
+      
+      - name: Initialize Yocto environment
+        run: |
+          echo "Setting up Yocto build environment..."
+          mkdir -p $BUILD_DIR
+          
+          # Set Yocto environment variables
+          export yocto_release=scarthgap
+          export meta_layer_adu=v2/scarthgap
+          export meta_layer_raspberrypi=scarthgap
+          
+          # Clone Yocto and meta-layers
+          cd scripts
+          ./clone-yocto-and-meta-layers.sh $BUILD_DIR
+          
+          echo "✅ Yocto environment initialized"
+      
+      - name: Configure build
+        run: |
+          cd $BUILD_DIR
+          
+          # Source BitBake environment
+          source poky/oe-init-build-env build
+          
+          # Verify bitbake is available
+          which bitbake
+          bitbake --version
+          
+          echo "✅ Build environment configured"
+      
+      - name: Build delta components
+        run: |
+          echo "=========================================="
+          echo "Building Delta Components"
+          echo "=========================================="
+          echo "Delta Branch: ${{ inputs.delta_branch }}"
+          if [ -n "${{ inputs.delta_commit }}" ]; then
+            echo "Delta Commit: ${{ inputs.delta_commit }}"
+          fi
+          echo "Clean Build: ${{ inputs.clean_build }}"
+          echo "=========================================="
+          
+          # Build command
+          BUILD_CMD="./scripts/build-delta-only.sh"
+          BUILD_CMD="$BUILD_CMD --adu-delta-git-branch ${{ inputs.delta_branch }}"
+          BUILD_CMD="$BUILD_CMD --build-dir $BUILD_DIR/build"
+          BUILD_CMD="$BUILD_CMD --verbose"
+          
+          if [ -n "${{ inputs.delta_commit }}" ]; then
+            BUILD_CMD="$BUILD_CMD --adu-delta-git-commit ${{ inputs.delta_commit }}"
+          fi
+          
+          if [ "${{ inputs.clean_build }}" = "true" ]; then
+            BUILD_CMD="$BUILD_CMD --clean"
+          fi
+          
+          echo "Running: $BUILD_CMD"
+          eval $BUILD_CMD
+      
+      - name: Verify build artifacts
+        if: success()
+        run: |
+          echo "Checking build artifacts..."
+          
+          if [ -d "$BUILD_DIR/build/tmp/deploy" ]; then
+            echo "✅ Deploy directory exists"
+            find $BUILD_DIR/build/tmp/deploy -type f -name "*delta*" -o -name "*bsdiff*" -o -name "*gsl*" | head -20
+          else
+            echo "❌ Deploy directory not found"
+            exit 1
+          fi
+      
+      - name: Build summary
+        if: always()
+        run: |
+          echo "## Delta Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Configuration:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: \`${{ inputs.delta_branch }}\`" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${{ inputs.delta_commit }}" ]; then
+            echo "- Commit: \`${{ inputs.delta_commit }}\`" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "- Clean Build: ${{ inputs.clean_build }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -d "$BUILD_DIR/build/tmp/deploy" ]; then
+            echo "**Build Status:** ✅ Success" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Artifacts:**" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            find $BUILD_DIR/build/tmp/deploy -type f -name "*delta*" -o -name "*bsdiff*" -o -name "*gsl*" | head -10 >> $GITHUB_STEP_SUMMARY || echo "No artifacts found"
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Build Status:** ❌ Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Disk Usage:**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          df -h | grep -E "Filesystem|/dev/root" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: delta-build-logs
+          path: |
+            ${{ env.BUILD_DIR }}/build/tmp/log/
+            ${{ env.BUILD_DIR }}/build/tmp/work/**/temp/log.*
+          retention-days: 7

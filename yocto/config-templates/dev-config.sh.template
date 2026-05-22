@@ -1,0 +1,27 @@
+#!/bin/bash
+# Developer-specific build configuration
+# Copy this to scripts/dev-config.sh and customize for your environment
+# Add scripts/dev-config.sh to .gitignore so it stays local
+
+# ============================================================================
+# IMPORTANT: This file only handles CLI arguments for build.sh
+# For BitBake configuration (manifest properties, threads, caches), 
+# use conf/developer.conf instead (see ./scripts/setup-dev-config.sh)
+# ============================================================================
+
+# Local source directories (required if using --local-sources)
+export ADU_LOCAL_SOURCE_DIR=~/adu_yocto/sources/iot-hub-device-update
+export ADU_DELTA_LOCAL_SOURCE_DIR=~/adu_yocto/sources/iot-hub-device-update-delta
+
+# Build output directory
+export ADU_BUILD_OUTPUT_DIR=~/adu_yocto/out/build
+
+# Optional: Set your Azure IoT Hub connection string for testing
+# export ADUC_IOTHUB_CONNECTION_STRING="your-connection-string-here"
+
+echo "✓ Developer config loaded:"
+echo "  ADU sources: $ADU_LOCAL_SOURCE_DIR"
+echo "  Delta sources: $ADU_DELTA_LOCAL_SOURCE_DIR"
+echo "  Build output: $ADU_BUILD_OUTPUT_DIR"
+echo ""
+echo "  For BitBake settings (threads, manifest, caches), edit conf/developer.conf"
