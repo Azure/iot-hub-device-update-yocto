@@ -527,6 +527,9 @@ echo "=== $STAGE: install adu-update-image-v1 to inactive slot ==="
 
 echo "[$STAGE] uploading artifacts..."
 ssh_run "mkdir -p /adu/staging"
+echo "[$STAGE] guest disk usage before upload:"
+ssh_run "df -h /adu / 2>&1; echo '---'; ls -la /adu/staging/ 2>&1; echo '---'; du -sh /adu/* 2>/dev/null || true" | sed "s/^/[$STAGE]   /"
+echo "[$STAGE] host artifact sizes: v1.swu=$(stat -c %s "$SWU_V1") v1-recomp=$(stat -c %s "$SWU_V1_RECOMP") bytes"
 scp_to_guest "$SWU_V1"        root@localhost:/adu/staging/v1.swu
 scp_to_guest "$SWU_V1_RECOMP" root@localhost:/adu/staging/v1-recompressed.swu
 
@@ -563,6 +566,8 @@ fi
 
 echo "[$STAGE] running adu-e2e-confirm-boot..."
 ssh_run "adu-e2e-confirm-boot" | tee "$OUT_DIR/${STAGE}-confirm.log"
+echo "[$STAGE] freeing space: removing stage1 artifacts from /adu/staging..."
+ssh_run "rm -f /adu/staging/v1.swu /adu/staging/v1-recompressed.swu /adu/staging/v1-recompressed.swu.tmp; df -h /adu" | sed "s/^/[$STAGE]   /"
 echo "[$STAGE] PASS"
 junit_pass "$STAGE"
 
