@@ -36,7 +36,7 @@ On your Linux host (Ubuntu 22.04 / WSL2 works; any distro with QEMU 6+ is
 fine):
 
 ```
-sudo apt-get install -y qemu-system-aarch64 openssh-client jq
+sudo apt-get install -y qemu-system-aarch64 openssh-client
 ```
 
 You need the following files from this artifact bundle (all in
