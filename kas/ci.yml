@@ -49,3 +49,24 @@ local_conf_header:
     # CI: Use environment-provided cache dirs (set by pipeline)
     DL_DIR ?= "${TOPDIR}/../downloads"
     SSTATE_DIR ?= "${TOPDIR}/../sstate-cache"
+  # IMPORTANT: kas emits local_conf_header blocks in alphabetical key order, so
+  # base.yml's "samples" block runs BEFORE our "z-ci-delta-on" block and would
+  # otherwise force WITH_FEATURE_DELTA_UPDATE=0 + BBMASK delta-generation. Use
+  # a "z-" prefix so this block sorts LAST and our override wins.
+  z-ci-delta-on: |
+    # CI hosts always have the toolchain needed to build the delta handler
+    # (libmicrosoft_delta_download_handler.so under /var/lib/adu/extensions/sources/).
+    # Force delta ON unconditionally so verify-image-contents.sh's required-file
+    # list is always satisfied, regardless of run_qemu_e2e/build_samples_package
+    # pipeline params. Local developers using kas without ci.yml still get the
+    # base.yml default (off) — they can opt-in via delta.yml / qemu-e2e.yml /
+    # samples-package.yml as before.
+    WITH_FEATURE_DELTA_UPDATE = "1"
+    BBMASK:remove = " meta-azure-device-update-samples/recipes-samples/delta-generation"
+
+    # libconfig K&R-vs-C23 fix (same as kas/qemu-e2e.yml and samples-package.yml).
+    # GCC 15's default -std=gnu23 rejects libconfig 1.7.3's grammar.y K&R decls;
+    # pin to gnu17 for that recipe only (target + native).
+    CFLAGS:append:pn-libconfig-native = " -std=gnu17"
+    CFLAGS:append:pn-libconfig = " -std=gnu17"
+    BUILD_CFLAGS:append:pn-libconfig-native = " -std=gnu17"
