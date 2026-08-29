@@ -29,7 +29,7 @@ jobs:
           df -h
       
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0  # Full history for better change detection
       
@@ -49,7 +49,7 @@ jobs:
       
       # Aggressive caching strategy
       - name: Restore downloads cache
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@6f8efc29b200d32929f49075959781ed54ec270c # v3.5.0
         id: cache-downloads
         with:
           path: ${{ env.BUILD_DIR }}/build/downloads
@@ -58,7 +58,7 @@ jobs:
             yocto-dl-${{ env.YOCTO_RELEASE }}-
       
       - name: Restore sstate cache
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@6f8efc29b200d32929f49075959781ed54ec270c # v3.5.0
         id: cache-sstate
         with:
           path: ${{ env.BUILD_DIR }}/build/sstate-cache
@@ -94,21 +94,21 @@ jobs:
       
       - name: Save downloads cache
         if: steps.cache-downloads.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v3
+        uses: actions/cache/save@6f8efc29b200d32929f49075959781ed54ec270c # v3.5.0
         with:
           path: ${{ env.BUILD_DIR }}/build/downloads
           key: ${{ steps.cache-downloads.outputs.cache-primary-key }}
       
       - name: Save sstate cache
         if: always()
-        uses: actions/cache/save@v3
+        uses: actions/cache/save@6f8efc29b200d32929f49075959781ed54ec270c # v3.5.0
         with:
           path: ${{ env.BUILD_DIR }}/build/sstate-cache
           key: yocto-sstate-${{ env.YOCTO_RELEASE }}-${{ github.base_ref || github.ref_name }}-${{ github.sha }}
       
       - name: Upload artifacts
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: pr-build-${{ github.event.pull_request.number }}
           path: |
